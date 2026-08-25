@@ -1,0 +1,51 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+.kotlin
+
+# Script files (per user request)
+*.bat
+*.cmd
+*.ps1
+
+# Local documentation files (not pushed to Git repository)
+src/DEFENSE_GUIDE.md
+src/Emergency_Mesh_Command_System_Spec.md
+src/Emergency_Mesh_Phased_Spec_1.md
+src/OFFLINE_MESH_EXPLAINED.md
+src/PHASE_2_ROADMAP.md
+src/SUPER_PROMPT_ANDROID.md
+src/SUPER_PROMPT_CRITERIA.md
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### Mac OS ###
+.DS_Store

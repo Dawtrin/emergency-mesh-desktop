@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.Circle?>
+<?import javafx.scene.web.WebView?>
+
+<!--
+    BaseStation.fxml — Dashboard Trạm Chỉ Huy Trung Tâm
+    Design: iOS 27 Inspired — Clean, dark, card-based layout
+    Controller: com.rescue.mesh.ui.controller.BaseStationController
+
+    Layout: BorderPane
+      ├── Top: Header bar + Stats cards
+      ├── Center: SplitPane
+      │   ├── Left: TableView danh sách nạn nhân
+      │   └── Right: WebView bản đồ Leaflet
+      ├── Bottom: Dispatch form + Log
+-->
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.rescue.mesh.ui.controller.BaseStationController"
+            style="-fx-background-color: #000000;"
+            prefWidth="1100" prefHeight="750">
+
+    <!-- ══════ TOP: HEADER + STATS ══════ -->
+    <top>
+        <VBox spacing="12" style="-fx-background-color: #000000;">
+            <padding><Insets top="14" right="20" bottom="10" left="20"/></padding>
+
+            <!-- Header row -->
+            <HBox alignment="CENTER_LEFT" spacing="12">
+                <Circle fx:id="serverStatusDot" radius="6" styleClass="status-dot-waiting"/>
+                <Label text="🛡️  TRẠM CHỈ HUY TRUNG TÂM" styleClass="title-large"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="lblServerStatus" text="Đang khởi động..." styleClass="subtitle-label"/>
+            </HBox>
+
+            <!-- Stats cards row -->
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <!-- Total SOS -->
+                <VBox styleClass="stat-card" HBox.hgrow="ALWAYS">
+                    <Label fx:id="lblTotalSos" text="0" styleClass="stat-number"/>
+                    <Label text="TỔNG SOS" styleClass="stat-label"/>
+                </VBox>
+
+                <!-- Critical -->
+                <VBox styleClass="stat-card-critical" HBox.hgrow="ALWAYS">
+                    <Label fx:id="lblCritical" text="0" styleClass="stat-number" style="-fx-text-fill: #FF3B30;"/>
+                    <Label text="CRITICAL" styleClass="stat-label" style="-fx-text-fill: #FF3B30;"/>
+                </VBox>
+
+                <!-- High -->
+                <VBox styleClass="stat-card-high" HBox.hgrow="ALWAYS">
+                    <Label fx:id="lblHigh" text="0" styleClass="stat-number" style="-fx-text-fill: #FF9F0A;"/>
+                    <Label text="HIGH" styleClass="stat-label" style="-fx-text-fill: #FF9F0A;"/>
+                </VBox>
+
+                <!-- Medium -->
+                <VBox styleClass="stat-card-medium" HBox.hgrow="ALWAYS">
+                    <Label fx:id="lblMedium" text="0" styleClass="stat-number" style="-fx-text-fill: #FFD60A;"/>
+                    <Label text="MEDIUM" styleClass="stat-label" style="-fx-text-fill: #FFD60A;"/>
+                </VBox>
+
+                <!-- Cache size -->
+                <VBox styleClass="stat-card" HBox.hgrow="ALWAYS">
+                    <Label fx:id="lblCacheSize" text="0" styleClass="stat-number" style="-fx-text-fill: #0A84FF;"/>
+                    <Label text="CACHE" styleClass="stat-label"/>
+                </VBox>
+            </HBox>
+        </VBox>
+    </top>
+
+    <!-- ══════ CENTER: TABLE + MAP ══════ -->
+    <center>
+        <SplitPane dividerPositions="0.5" style="-fx-background-color: #000000;">
+            <padding><Insets top="0" right="8" bottom="0" left="8"/></padding>
+
+            <!-- Left: Victim Table -->
+            <VBox spacing="8">
+                <padding><Insets top="8" right="6" bottom="8" left="12"/></padding>
+                <Label text="DANH SÁCH NẠN NHÂN" styleClass="section-header"/>
+
+                <TableView fx:id="tblVictims" VBox.vgrow="ALWAYS" styleClass="table-view">
+                    <columns>
+                        <TableColumn fx:id="colStt" text="#" prefWidth="35" minWidth="35"/>
+                        <TableColumn fx:id="colSourceNode" text="Node Nguồn" prefWidth="120"/>
+                        <TableColumn fx:id="colAlertType" text="Tình Huống" prefWidth="110"/>
+                        <TableColumn fx:id="colSeverity" text="Mức Độ" prefWidth="80"/>
+                        <TableColumn fx:id="colVictimCount" text="Nạn Nhân" prefWidth="70"/>
+                        <TableColumn fx:id="colCoordinates" text="Tọa Độ" prefWidth="120"/>
+                        <TableColumn fx:id="colTime" text="Thời Gian" prefWidth="75"/>
+                    </columns>
+                </TableView>
+            </VBox>
+
+            <!-- Right: Leaflet Map -->
+            <VBox spacing="8">
+                <padding><Insets top="8" right="12" bottom="8" left="6"/></padding>
+                <Label text="BẢN ĐỒ THỰC ĐỊA" styleClass="section-header"/>
+
+                <StackPane VBox.vgrow="ALWAYS" styleClass="map-container">
+                    <WebView fx:id="mapWebView"/>
+                </StackPane>
+            </VBox>
+        </SplitPane>
+    </center>
+
+    <!-- ══════ BOTTOM: DISPATCH + LOG ══════ -->
+    <bottom>
+        <VBox spacing="10" style="-fx-background-color: #000000;">
+            <padding><Insets top="6" right="20" bottom="14" left="20"/></padding>
+
+            <!-- Dispatch Command Form -->
+            <HBox spacing="12" alignment="CENTER_LEFT" styleClass="card-elevated">
+                <padding><Insets top="12" right="16" bottom="12" left="16"/></padding>
+
+                <Label text="📋 LỆNH:" style="-fx-text-fill: #8E8E93; -fx-font-weight: bold; -fx-font-size: 13;"/>
+
+                <ComboBox fx:id="cboTargetNode" promptText="Chọn nạn nhân..."
+                          prefWidth="180" styleClass="combo-box"/>
+
+                <TextField fx:id="txtDispatchCommand" promptText="Nội dung lệnh chỉ đạo..."
+                           HBox.hgrow="ALWAYS" styleClass="text-field"/>
+
+                <ComboBox fx:id="cboDispatchSeverity" prefWidth="120" styleClass="combo-box"/>
+
+                <Button fx:id="btnSendDispatch" text="📤 Gửi Lệnh"
+                        styleClass="dispatch-button" onAction="#onSendDispatch"/>
+
+                <Button fx:id="btnStopAlarm" text="🔇 Tắt Còi"
+                        styleClass="button-secondary" onAction="#onStopAlarm"/>
+            </HBox>
+
+            <!-- Log Area -->
+            <TextArea fx:id="txtLog" editable="false" wrapText="true"
+                      prefRowCount="5" styleClass="log-area"/>
+        </VBox>
+    </bottom>
+</BorderPane>

@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.rescue.mesh</groupId>
+    <artifactId>emergency-mesh-desktop</artifactId>
+    <version>1.0.0-MIDTERM</version>
+    <packaging>jar</packaging>
+    <name>Emergency Mesh Rescue - Hybrid GUI Server &amp; Console Client</name>
+
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <javafx.version>21.0.2</javafx.version>
+        <gson.version>2.10.1</gson.version>
+        <atlantafx.version>2.0.1</atlantafx.version>
+        <slf4j.version>2.0.9</slf4j.version>
+    </properties>
+
+    <dependencies>
+        <!-- JavaFX GUI (Dùng cho BaseStation Server) -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-fxml</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-web</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-media</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+
+        <!-- AtlantaFX Theme (Dùng cho Server UI) -->
+        <dependency>
+            <groupId>io.github.mkpaz</groupId>
+            <artifactId>atlantafx-base</artifactId>
+            <version>${atlantafx.version}</version>
+        </dependency>
+
+        <!-- Gson JSON (Dùng chung cho cả Server & Client) -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>${gson.version}</version>
+        </dependency>
+
+        <!-- Logging -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+
+        <!-- Testing -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.10.1</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Compiler Plugin (Java 21) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <source>21</source>
+                    <target>21</target>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+
+            <!-- JavaFX Plugin (Dùng để chạy nhanh Server từ IDE bằng lệnh 'mvn javafx:run') -->
+            <plugin>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-maven-plugin</artifactId>
+                <version>0.0.8</version>
+                <configuration>
+                    <mainClass>com.rescue.mesh.BaseStationApp</mainClass>
+                </configuration>
+            </plugin>
+
+            <!-- Assembly Plugin: Tạo 2 file Fat JAR riêng biệt khi build 'mvn clean package' -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <!-- Fat JAR 1: Server GUI (BaseStation) -->
+                    <execution>
+                        <id>server-gui-jar</id>
+                        <phase>package</phase>
+                        <goals><goal>single</goal></goals>
+                        <configuration>
+                            <finalName>BaseStationServer</finalName>
+                            <archive>
+                                <manifest>
+                                    <mainClass>com.rescue.mesh.BaseStationLauncher</mainClass>
+                                </manifest>
+                            </archive>
+                            <descriptorRefs>
+                                <descriptorRef>jar-with-dependencies</descriptorRef>
+                            </descriptorRefs>
+                        </configuration>
+                    </execution>
+
+                    <!-- Fat JAR 2: Client Console (MeshNode) -->
+                    <execution>
+                        <id>client-console-jar</id>
+                        <phase>package</phase>
+                        <goals><goal>single</goal></goals>
+                        <configuration>
+                            <finalName>MeshNodeClient</finalName>
+                            <archive>
+                                <manifest>
+                                    <mainClass>com.rescue.mesh.SimulatedNodeLauncher</mainClass>
+                                </manifest>
+                            </archive>
+                            <descriptorRefs>
+                                <descriptorRef>jar-with-dependencies</descriptorRef>
+                            </descriptorRefs>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

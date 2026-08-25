@@ -1,0 +1,582 @@
+/*
+ * ══════════════════════════════════════════════════════════════
+ *  EMERGENCY MESH RESCUE — iOS 27 Inspired Dark Theme
+ * ══════════════════════════════════════════════════════════════
+ *
+ *  Design Language: Apple iOS 27 / Human Interface Guidelines
+ *    - Pure black backgrounds (#000000)
+ *    - Elevated surfaces (#1C1C1E, #2C2C2E)
+ *    - System font stack (Segoe UI on Windows)
+ *    - Large corner radius (14-20px)
+ *    - Subtle depth via drop shadows
+ *    - Vibrancy colors (SF Red, Green, Blue, Orange)
+ *    - Clean typography with generous spacing
+ *    - Glassmorphism panels with semi-transparent backgrounds
+ *
+ *  Color Palette (iOS System Colors):
+ *    Primary Background:  #000000
+ *    Elevated Surface:    #1C1C1E
+ *    Secondary Surface:   #2C2C2E
+ *    Tertiary Surface:    #3A3A3C
+ *    Separator:           #48484A
+ *    Text Primary:        #FFFFFF
+ *    Text Secondary:      #8E8E93
+ *    Text Tertiary:       #636366
+ *    Accent Red (SOS):    #FF3B30
+ *    Accent Green:        #30D158
+ *    Accent Orange:       #FF9F0A
+ *    Accent Blue:         #0A84FF
+ *    Accent Yellow:       #FFD60A
+ */
+
+/* ══════════════════════════════════════════════════════════════
+   ROOT — Overrides AtlantaFX CupertinoDark base
+   ══════════════════════════════════════════════════════════════ */
+
+.root {
+    -fx-base: #000000;
+    -fx-background: #000000;
+    -fx-control-inner-background: #1C1C1E;
+    -fx-accent: #FF3B30;
+    -fx-focus-color: rgba(255, 59, 48, 0.6);
+    -fx-faint-focus-color: rgba(255, 59, 48, 0.2);
+    -fx-font-family: "Segoe UI", "SF Pro Display", "-apple-system", "Helvetica Neue", system;
+    -fx-font-size: 14px;
+    -fx-text-fill: #FFFFFF;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CARDS — iOS-style rounded containers
+   ══════════════════════════════════════════════════════════════ */
+
+.card {
+    -fx-background-color: #1C1C1E;
+    -fx-background-radius: 18;
+    -fx-border-radius: 18;
+    -fx-padding: 18;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 12, 0, 0, 4);
+}
+
+.card-elevated {
+    -fx-background-color: #2C2C2E;
+    -fx-background-radius: 16;
+    -fx-border-radius: 16;
+    -fx-padding: 16;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 8, 0, 0, 2);
+}
+
+.card-glass {
+    -fx-background-color: rgba(44, 44, 46, 0.85);
+    -fx-background-radius: 18;
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-radius: 18;
+    -fx-border-width: 0.5;
+    -fx-padding: 16;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.25), 16, 0, 0, 6);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   STAT CARDS — Dashboard statistics (Total SOS, Critical, etc.)
+   ══════════════════════════════════════════════════════════════ */
+
+.stat-card {
+    -fx-background-color: #2C2C2E;
+    -fx-background-radius: 14;
+    -fx-border-radius: 14;
+    -fx-padding: 14 18;
+    -fx-min-width: 130;
+    -fx-alignment: center;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 6, 0, 0, 2);
+}
+
+.stat-card-critical {
+    -fx-background-color: rgba(255, 59, 48, 0.15);
+    -fx-background-radius: 14;
+    -fx-border-radius: 14;
+    -fx-border-color: rgba(255, 59, 48, 0.3);
+    -fx-border-width: 1;
+    -fx-padding: 14 18;
+    -fx-min-width: 130;
+    -fx-alignment: center;
+}
+
+.stat-card-high {
+    -fx-background-color: rgba(255, 159, 10, 0.15);
+    -fx-background-radius: 14;
+    -fx-border-radius: 14;
+    -fx-border-color: rgba(255, 159, 10, 0.3);
+    -fx-border-width: 1;
+    -fx-padding: 14 18;
+    -fx-min-width: 130;
+    -fx-alignment: center;
+}
+
+.stat-card-medium {
+    -fx-background-color: rgba(255, 214, 10, 0.15);
+    -fx-background-radius: 14;
+    -fx-border-radius: 14;
+    -fx-border-color: rgba(255, 214, 10, 0.3);
+    -fx-border-width: 1;
+    -fx-padding: 14 18;
+    -fx-min-width: 130;
+    -fx-alignment: center;
+}
+
+.stat-number {
+    -fx-font-size: 28;
+    -fx-font-weight: bold;
+    -fx-text-fill: #FFFFFF;
+}
+
+.stat-label {
+    -fx-font-size: 11;
+    -fx-font-weight: normal;
+    -fx-text-fill: #8E8E93;
+    -fx-padding: 4 0 0 0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TYPOGRAPHY
+   ══════════════════════════════════════════════════════════════ */
+
+.title-large {
+    -fx-font-size: 28;
+    -fx-font-weight: bold;
+    -fx-text-fill: #FFFFFF;
+}
+
+.title-label {
+    -fx-font-size: 20;
+    -fx-font-weight: bold;
+    -fx-text-fill: #FFFFFF;
+}
+
+.subtitle-label {
+    -fx-font-size: 13;
+    -fx-font-weight: normal;
+    -fx-text-fill: #8E8E93;
+}
+
+.section-header {
+    -fx-font-size: 13;
+    -fx-font-weight: bold;
+    -fx-text-fill: #8E8E93;
+    -fx-padding: 8 0 6 2;
+    -fx-text-transform: uppercase;
+}
+
+.label-red {
+    -fx-text-fill: #FF3B30;
+}
+
+.label-green {
+    -fx-text-fill: #30D158;
+}
+
+.label-orange {
+    -fx-text-fill: #FF9F0A;
+}
+
+.label-blue {
+    -fx-text-fill: #0A84FF;
+}
+
+.label-yellow {
+    -fx-text-fill: #FFD60A;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BUTTONS
+   ══════════════════════════════════════════════════════════════ */
+
+.button {
+    -fx-background-color: #2C2C2E;
+    -fx-text-fill: #0A84FF;
+    -fx-font-size: 15;
+    -fx-font-weight: 600;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-padding: 10 20;
+    -fx-cursor: hand;
+}
+
+.button:hover {
+    -fx-background-color: #3A3A3C;
+}
+
+.button:pressed {
+    -fx-background-color: #1C1C1E;
+    -fx-opacity: 0.8;
+}
+
+/* SOS Button — Grande, urgent, pulsing red */
+.sos-button {
+    -fx-background-color: #FF3B30;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 17;
+    -fx-font-weight: bold;
+    -fx-background-radius: 16;
+    -fx-border-radius: 16;
+    -fx-padding: 16 36;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(255, 59, 48, 0.5), 20, 0, 0, 4);
+}
+
+.sos-button:hover {
+    -fx-background-color: #FF453A;
+    -fx-effect: dropshadow(gaussian, rgba(255, 59, 48, 0.7), 25, 0, 0, 6);
+}
+
+.sos-button:pressed {
+    -fx-background-color: #CC2D25;
+    -fx-effect: dropshadow(gaussian, rgba(255, 59, 48, 0.3), 10, 0, 0, 2);
+}
+
+/* Secondary action buttons */
+.button-secondary {
+    -fx-background-color: #2C2C2E;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 14;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-padding: 10 18;
+    -fx-cursor: hand;
+}
+
+.button-secondary:hover {
+    -fx-background-color: #3A3A3C;
+}
+
+/* Dispatch button — Blue accent */
+.dispatch-button {
+    -fx-background-color: #0A84FF;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 15;
+    -fx-font-weight: bold;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-padding: 12 24;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(10, 132, 255, 0.4), 12, 0, 0, 3);
+}
+
+.dispatch-button:hover {
+    -fx-background-color: #409CFF;
+}
+
+.dispatch-button:pressed {
+    -fx-background-color: #0870D9;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TEXT FIELDS & TEXT AREAS
+   ══════════════════════════════════════════════════════════════ */
+
+.text-field {
+    -fx-background-color: #2C2C2E;
+    -fx-text-fill: #FFFFFF;
+    -fx-prompt-text-fill: #636366;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-border-color: rgba(255, 255, 255, 0.06);
+    -fx-border-width: 0.5;
+    -fx-padding: 10 14;
+    -fx-font-size: 15;
+}
+
+.text-field:focused {
+    -fx-border-color: rgba(255, 59, 48, 0.5);
+    -fx-border-width: 1.5;
+    -fx-background-color: #1C1C1E;
+}
+
+.text-area {
+    -fx-background-color: #1C1C1E;
+    -fx-control-inner-background: #1C1C1E;
+    -fx-text-fill: #FFFFFF;
+    -fx-background-radius: 14;
+    -fx-border-radius: 14;
+    -fx-font-size: 14;
+}
+
+.text-area .content {
+    -fx-background-color: #1C1C1E;
+    -fx-background-radius: 14;
+}
+
+.text-area:focused {
+    -fx-border-color: rgba(255, 59, 48, 0.4);
+}
+
+/* Log display — Monospace terminal look */
+.log-area {
+    -fx-control-inner-background: #0D0D0D;
+    -fx-background-color: #0D0D0D;
+    -fx-text-fill: #30D158;
+    -fx-font-family: "Cascadia Code", "JetBrains Mono", "Consolas", "SF Mono", monospace;
+    -fx-font-size: 12;
+    -fx-background-radius: 14;
+    -fx-border-radius: 14;
+    -fx-border-color: rgba(48, 209, 88, 0.15);
+    -fx-border-width: 0.5;
+}
+
+.log-area .content {
+    -fx-background-color: #0D0D0D;
+    -fx-background-radius: 14;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   COMBO BOX
+   ══════════════════════════════════════════════════════════════ */
+
+.combo-box {
+    -fx-background-color: #2C2C2E;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-border-color: rgba(255, 255, 255, 0.06);
+    -fx-border-width: 0.5;
+    -fx-padding: 4 8;
+}
+
+.combo-box .list-cell {
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 14;
+    -fx-background-color: transparent;
+}
+
+.combo-box-popup .list-view {
+    -fx-background-color: #2C2C2E;
+    -fx-background-radius: 12;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 16, 0, 0, 6);
+}
+
+.combo-box-popup .list-view .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #FFFFFF;
+    -fx-padding: 8 14;
+}
+
+.combo-box-popup .list-view .list-cell:hover {
+    -fx-background-color: #3A3A3C;
+}
+
+.combo-box-popup .list-view .list-cell:filled:selected {
+    -fx-background-color: rgba(10, 132, 255, 0.3);
+    -fx-text-fill: #0A84FF;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TABLE VIEW — iOS-style clean table
+   ══════════════════════════════════════════════════════════════ */
+
+.table-view {
+    -fx-background-color: #1C1C1E;
+    -fx-border-color: transparent;
+    -fx-table-cell-border-color: transparent;
+    -fx-background-radius: 14;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: #2C2C2E;
+}
+
+.table-view .column-header {
+    -fx-background-color: #2C2C2E;
+    -fx-border-color: transparent transparent #48484A transparent;
+    -fx-border-width: 0 0 0.5 0;
+}
+
+.table-view .column-header .label {
+    -fx-text-fill: #8E8E93;
+    -fx-font-size: 12;
+    -fx-font-weight: 600;
+    -fx-padding: 8 10;
+}
+
+.table-view .filler {
+    -fx-background-color: #2C2C2E;
+}
+
+.table-row-cell {
+    -fx-background-color: #1C1C1E;
+    -fx-border-color: transparent transparent #2C2C2E transparent;
+    -fx-border-width: 0 0 0.5 0;
+    -fx-table-cell-border-color: transparent;
+}
+
+.table-row-cell:odd {
+    -fx-background-color: #1C1C1E;
+}
+
+.table-row-cell:selected {
+    -fx-background-color: rgba(10, 132, 255, 0.25);
+}
+
+.table-row-cell:selected .text {
+    -fx-fill: #FFFFFF;
+}
+
+.table-cell {
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 13;
+    -fx-padding: 10 10;
+    -fx-alignment: CENTER-LEFT;
+}
+
+/* Severity-based row highlighting */
+.severity-critical {
+    -fx-background-color: rgba(255, 59, 48, 0.12);
+}
+
+.severity-critical:selected {
+    -fx-background-color: rgba(255, 59, 48, 0.35);
+}
+
+.severity-high {
+    -fx-background-color: rgba(255, 159, 10, 0.10);
+}
+
+.severity-medium {
+    -fx-background-color: rgba(255, 214, 10, 0.08);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SCROLL BARS — Minimal iOS style
+   ══════════════════════════════════════════════════════════════ */
+
+.scroll-bar {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar .track {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-background-radius: 4;
+}
+
+.scroll-bar .thumb:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.35);
+}
+
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.scroll-bar .increment-arrow,
+.scroll-bar .decrement-arrow {
+    -fx-shape: " ";
+    -fx-padding: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SPLIT PANE — Clean dividers
+   ══════════════════════════════════════════════════════════════ */
+
+.split-pane {
+    -fx-background-color: #000000;
+    -fx-padding: 0;
+}
+
+.split-pane-divider {
+    -fx-background-color: #2C2C2E;
+    -fx-padding: 0 1 0 1;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   STATUS INDICATORS
+   ══════════════════════════════════════════════════════════════ */
+
+.status-dot-connected {
+    -fx-fill: #30D158;
+    -fx-effect: dropshadow(gaussian, rgba(48, 209, 88, 0.6), 6, 0, 0, 0);
+}
+
+.status-dot-disconnected {
+    -fx-fill: #FF3B30;
+    -fx-effect: dropshadow(gaussian, rgba(255, 59, 48, 0.6), 6, 0, 0, 0);
+}
+
+.status-dot-waiting {
+    -fx-fill: #FF9F0A;
+    -fx-effect: dropshadow(gaussian, rgba(255, 159, 10, 0.6), 6, 0, 0, 0);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   HEADER BAR — Top navigation strip
+   ══════════════════════════════════════════════════════════════ */
+
+.header-bar {
+    -fx-background-color: rgba(28, 28, 30, 0.9);
+    -fx-background-radius: 0 0 18 18;
+    -fx-padding: 14 20;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 8, 0, 0, 3);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   WEB VIEW — Map container
+   ══════════════════════════════════════════════════════════════ */
+
+.map-container {
+    -fx-background-color: #1C1C1E;
+    -fx-background-radius: 14;
+    -fx-border-radius: 14;
+    -fx-border-color: rgba(255, 255, 255, 0.06);
+    -fx-border-width: 0.5;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 6, 0, 0, 2);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FORM LAYOUT — iOS grouped table style
+   ══════════════════════════════════════════════════════════════ */
+
+.form-group {
+    -fx-background-color: #1C1C1E;
+    -fx-background-radius: 14;
+    -fx-border-radius: 14;
+    -fx-padding: 4 0;
+}
+
+.form-row {
+    -fx-padding: 10 16;
+    -fx-border-color: transparent transparent #2C2C2E transparent;
+    -fx-border-width: 0 0 0.5 0;
+}
+
+.form-label {
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 15;
+    -fx-min-width: 120;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TOOLTIP
+   ══════════════════════════════════════════════════════════════ */
+
+.tooltip {
+    -fx-background-color: rgba(58, 58, 60, 0.95);
+    -fx-background-radius: 10;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 13;
+    -fx-padding: 8 14;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 10, 0, 0, 4);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ANIMATIONS — CSS-based transition support
+   ══════════════════════════════════════════════════════════════ */
+
+.fade-in {
+    -fx-opacity: 1.0;
+}
+
+.pulse-red {
+    -fx-border-color: rgba(255, 59, 48, 0.5);
+    -fx-border-width: 2;
+    -fx-border-radius: 16;
+}

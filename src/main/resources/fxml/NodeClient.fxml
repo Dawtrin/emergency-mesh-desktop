@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.Circle?>
+<?import javafx.scene.text.Font?>
+
+<!--
+    NodeClient.fxml — Giao diện Node Giả Lập (Victim / Relay)
+    Design: iOS 27 Inspired — Clean cards, rounded corners, dark palette
+    Controller: com.rescue.mesh.ui.controller.NodeClientController
+
+    Layout: VBox vertical
+      ├── Header (node ID + status indicator)
+      ├── SOS Form Card (ẩn nếu RELAY mode)
+      │   ├── Sender name, Alert type, Severity
+      │   ├── Victim count, Latitude, Longitude
+      │   ├── Message textarea
+      │   └── SOS Button + Quick SOS + Heartbeat
+      └── Log Card (TextArea monospace)
+-->
+
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.rescue.mesh.ui.controller.NodeClientController"
+      spacing="0"
+      style="-fx-background-color: #000000;"
+      prefWidth="420" prefHeight="700">
+
+    <!-- ══════ HEADER BAR ══════ -->
+    <HBox styleClass="header-bar" alignment="CENTER_LEFT" spacing="12">
+        <padding><Insets top="14" right="20" bottom="14" left="20"/></padding>
+
+        <!-- Status indicator dot -->
+        <Circle fx:id="statusDot" radius="6" styleClass="status-dot-waiting"/>
+
+        <!-- Node ID -->
+        <VBox spacing="2" HBox.hgrow="ALWAYS">
+            <Label fx:id="lblNodeId" text="NODE_A_VICTIM" styleClass="title-label">
+                <font><Font size="18"/></font>
+            </Label>
+            <Label fx:id="lblNodeInfo" text="Port: 8001 → Next: 8002" styleClass="subtitle-label"/>
+        </VBox>
+
+        <!-- Server status -->
+        <Label fx:id="lblStatus" text="Đang khởi động..." styleClass="subtitle-label"/>
+    </HBox>
+
+    <!-- ══════ SCROLLABLE CONTENT ══════ -->
+    <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
+                style="-fx-background-color: #000000; -fx-background: #000000;">
+        <VBox spacing="16" style="-fx-background-color: #000000;">
+            <padding><Insets top="16" right="16" bottom="16" left="16"/></padding>
+
+            <!-- ══════ SOS FORM CARD ══════ -->
+            <VBox fx:id="sosFormContainer" spacing="0" styleClass="card">
+
+                <!-- Section header -->
+                <Label text="THÔNG TIN SOS" styleClass="section-header"/>
+
+                <!-- Form Fields -->
+                <VBox spacing="12">
+                    <padding><Insets top="8"/></padding>
+
+                    <!-- Sender Name -->
+                    <VBox spacing="4">
+                        <Label text="Tên người gửi" styleClass="subtitle-label"/>
+                        <TextField fx:id="txtSenderName" promptText="Nhập tên nạn nhân..."
+                                   styleClass="text-field"/>
+                    </VBox>
+
+                    <!-- Alert Type + Severity (2 columns) -->
+                    <HBox spacing="12">
+                        <VBox spacing="4" HBox.hgrow="ALWAYS">
+                            <Label text="Loại tình huống" styleClass="subtitle-label"/>
+                            <ComboBox fx:id="cboAlertType" maxWidth="Infinity"
+                                      styleClass="combo-box"/>
+                        </VBox>
+                        <VBox spacing="4" HBox.hgrow="ALWAYS">
+                            <Label text="Mức độ" styleClass="subtitle-label"/>
+                            <ComboBox fx:id="cboSeverity" maxWidth="Infinity"
+                                      styleClass="combo-box"/>
+                        </VBox>
+                    </HBox>
+
+                    <!-- Victim Count + Lat + Lon (3 columns) -->
+                    <HBox spacing="12">
+                        <VBox spacing="4" HBox.hgrow="ALWAYS">
+                            <Label text="Số nạn nhân" styleClass="subtitle-label"/>
+                            <TextField fx:id="txtVictimCount" promptText="1"
+                                       styleClass="text-field"/>
+                        </VBox>
+                        <VBox spacing="4" HBox.hgrow="ALWAYS">
+                            <Label text="Vĩ độ" styleClass="subtitle-label"/>
+                            <TextField fx:id="txtLatitude" promptText="15.9738"
+                                       styleClass="text-field"/>
+                        </VBox>
+                        <VBox spacing="4" HBox.hgrow="ALWAYS">
+                            <Label text="Kinh độ" styleClass="subtitle-label"/>
+                            <TextField fx:id="txtLongitude" promptText="108.2515"
+                                       styleClass="text-field"/>
+                        </VBox>
+                    </HBox>
+
+                    <!-- Message -->
+                    <VBox spacing="4">
+                        <Label text="Mô tả tình huống" styleClass="subtitle-label"/>
+                        <TextArea fx:id="txtMessage" promptText="Mô tả chi tiết tình huống..."
+                                  prefRowCount="2" wrapText="true"
+                                  styleClass="text-area"/>
+                    </VBox>
+
+                    <!-- Buttons -->
+                    <VBox spacing="10">
+                        <padding><Insets top="6"/></padding>
+                        <Button fx:id="btnSendSos" text="🚨  GỬI TÍN HIỆU SOS"
+                                maxWidth="Infinity" styleClass="sos-button"
+                                onAction="#onSendSos"/>
+                        <HBox spacing="10">
+                            <Button fx:id="btnQuickSos" text="⚡ SOS Nhanh"
+                                    HBox.hgrow="ALWAYS" maxWidth="Infinity"
+                                    styleClass="button-secondary"
+                                    onAction="#onQuickSos"/>
+                            <Button fx:id="btnHeartbeat" text="💓 Heartbeat"
+                                    HBox.hgrow="ALWAYS" maxWidth="Infinity"
+                                    styleClass="button-secondary"
+                                    onAction="#onHeartbeat"/>
+                        </HBox>
+                    </VBox>
+                </VBox>
+            </VBox>
+
+            <!-- ══════ DISPATCH RECEIVED CARD (hiện khi nhận lệnh) ══════ -->
+            <VBox fx:id="dispatchCard" spacing="8" styleClass="card" visible="false" managed="false">
+                <Label text="📋 LỆNH CHỈ ĐẠO TỪ TRẠM CHỈ HUY" styleClass="section-header"
+                       style="-fx-text-fill: #0A84FF;"/>
+                <Label fx:id="lblDispatchContent" wrapText="true"
+                       style="-fx-text-fill: #FFFFFF; -fx-font-size: 15;"/>
+            </VBox>
+
+            <!-- ══════ LOG CARD ══════ -->
+            <VBox spacing="6" styleClass="card" VBox.vgrow="ALWAYS">
+                <Label text="SYSTEM LOG" styleClass="section-header"/>
+                <TextArea fx:id="txtLog" editable="false" wrapText="true"
+                          prefRowCount="10" VBox.vgrow="ALWAYS"
+                          styleClass="log-area"/>
+            </VBox>
+
+        </VBox>
+    </ScrollPane>
+</VBox>
