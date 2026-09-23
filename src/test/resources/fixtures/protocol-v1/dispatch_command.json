@@ -1,0 +1,26 @@
+{
+  "packet_id": "1c9a8f23-4e5b-4c6d-8f90-123456789abc",
+  "protocol_version": "1.0",
+  "packet_type": "DISPATCH_COMMAND",
+  "source_node_id": "BASE_STATION",
+  "destination_node_id": "ANDROID_VICTIM_01",
+  "sender_hop_id": "BASE_STATION",
+  "ttl": 5,
+  "hop_count": 0,
+  "timestamp": 1771240050000,
+  "payload": {
+    "sender_name": "BASE_STATION_COMMANDER",
+    "alert_type": "DISPATCH",
+    "message": "Đã tiếp nhận tọa độ, cano cứu hộ đang tiếp cận. Giữ bình tĩnh!",
+    "victim_count": 0,
+    "severity": "CRITICAL",
+    "location": {
+      "latitude": 0.0,
+      "longitude": 0.0,
+      "altitude": 0.0,
+      "accuracy": 0.0
+    }
+  },
+  "route_history": [],
+  "checksum": "d9349c2c98d5718de0740a93f419e504282316b3d41756f9c4ad7a2a839c9488"
+}

@@ -4,244 +4,100 @@ import com.google.gson.Gson;
 import com.rescue.mesh.model.MeshPacket;
 
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
-import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketTimeoutException;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * Client TCP — gửi gói tin MeshPacket đến node hoặc server qua Socket.
- *
- * Cơ sở lý thuyết:
- *   Đóng vai trò Transport Layer client trong kiến trúc TCP/IP.
- *   Mỗi lần gửi mở 1 TCP connection mới (short-lived connection),
- *   phù hợp với traffic pattern thấp của hệ thống cứu nạn.
- *
- * Design Pattern: Gateway Pattern
- *   - Đóng gói toàn bộ logic TCP I/O vào 1 class duy nhất
- *   - Cung cấp API đơn giản: send(host, port, packet)
- *   - Tích hợp retry logic (3 lần thử), timeout 5 giây
- *   - UI layer chỉ cần gọi 1 method, không cần biết Socket API
- *
- * Thread Safety:
- *   - Mỗi lời gọi send() tạo Socket riêng → an toàn multi-thread
- *   - Không có shared mutable state (stateless utility class)
- *   - Có thể gọi đồng thời từ nhiều thread
- */
-public class SocketClient {
-
-    /** Timeout kết nối TCP (milliseconds) */
-    private static final int CONNECTION_TIMEOUT_MS = 5000;
-
-    /** Số lần thử lại tối đa khi ConnectException */
-    private static final int MAX_RETRY_ATTEMPTS = 3;
-
-    /** Thời gian chờ giữa các lần thử lại (milliseconds) */
-    private static final long RETRY_DELAY_MS = 1000;
-
-    /** Gson instance dùng chung — thread-safe vì Gson immutable */
+/** Bounded TCP gateway; UI callers use its shared daemon executor. */
+public final class SocketClient {
+    private static final int CONNECTION_TIMEOUT_MS = 5_000;
     private static final Gson GSON = new Gson();
+    private static final ThreadPoolExecutor ASYNC_EXECUTOR = new ThreadPoolExecutor(
+            1, 2, 30, TimeUnit.SECONDS, new ArrayBlockingQueue<>(32), new DaemonThreadFactory(),
+            new ThreadPoolExecutor.AbortPolicy());
 
-    /** Private constructor — utility class, không cho phép tạo instance */
     private SocketClient() {}
 
-    // =========================================================
-    // CALLBACK INTERFACE
-    // =========================================================
-
-    /**
-     * Callback để thông báo kết quả gửi gói tin lên tầng trên.
-     * Dùng bởi UI layer để cập nhật trạng thái sau khi gửi.
-     */
     public interface SendCallback {
-        /**
-         * Được gọi khi gửi gói tin thành công.
-         *
-         * @param packetId ID của gói tin đã gửi
-         * @param host     Địa chỉ host đã gửi đến
-         * @param port     Port đã gửi đến
-         */
         void onSendSuccess(String packetId, String host, int port);
-
-        /**
-         * Được gọi khi gửi gói tin thất bại sau tất cả lần thử.
-         *
-         * @param packetId ID của gói tin không gửi được
-         * @param host     Địa chỉ host đã thử gửi
-         * @param port     Port đã thử gửi
-         * @param error    Mô tả lỗi
-         */
         void onSendFailed(String packetId, String host, int port, String error);
     }
 
-    // =========================================================
-    // GỬI GÓI TIN — ĐỒNG BỘ (BLOCKING)
-    // =========================================================
+    /** One TCP connect/write attempt. A true result is transport delivery only, never an ACK. */
+    public static boolean send(String host, int port, MeshPacket packet) { return send(host, port, packet, null); }
 
-    /**
-     * Gửi MeshPacket đến host:port — phiên bản đồng bộ không callback.
-     *
-     * @param host   Địa chỉ host đích (thường "localhost" trong giả lập)
-     * @param port   Port đích (8001 / 8002 / 8888)
-     * @param packet Gói tin cần gửi (không được null)
-     * @return true nếu gửi thành công, false nếu thất bại
-     */
-    public static boolean send(String host, int port, MeshPacket packet) {
-        return send(host, port, packet, null);
-    }
-
-    /**
-     * Gửi MeshPacket đến host:port — có callback thông báo kết quả.
-     * Tự động thử lại MAX_RETRY_ATTEMPTS lần khi ConnectException.
-     *
-     * @param host     Địa chỉ host đích
-     * @param port     Port đích
-     * @param packet   Gói tin cần gửi
-     * @param callback Callback thông báo thành công/thất bại (có thể null)
-     * @return true nếu gửi thành công, false nếu thất bại
-     */
     public static boolean send(String host, int port, MeshPacket packet, SendCallback callback) {
+        String packetId = packet == null ? "UNKNOWN" : packet.getPacketId();
         if (packet == null) {
-            System.err.println("[ERROR] SocketClient.send: packet null — hủy gửi");
-            if (callback != null) {
-                callback.onSendFailed("UNKNOWN", host, port, "Packet is null");
-            }
+            notifyFailure(callback, packetId, host, port, "Gói tin trống.");
             return false;
         }
-
-        String json = GSON.toJson(packet);
-        String packetId = packet.getPacketId();
-
-        for (int attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
-            try (Socket socket = new Socket()) {
-                // Kết nối với timeout
-                socket.connect(new InetSocketAddress(host, port), CONNECTION_TIMEOUT_MS);
-                socket.setSoTimeout(CONNECTION_TIMEOUT_MS);
-
-                // Gửi JSON qua stream — auto-flush
-                PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
-                writer.println(json);
-                writer.flush();
-
-                System.out.println("[SEND] SocketClient: "
-                        + shortId(packetId) + " → " + host + ":" + port
-                        + " (attempt " + attempt + "/" + MAX_RETRY_ATTEMPTS + ") — OK");
-
-                if (callback != null) {
-                    callback.onSendSuccess(packetId, host, port);
-                }
-                return true;
-
-            } catch (ConnectException e) {
-                System.err.println("[ERROR] SocketClient: Không kết nối được "
-                        + host + ":" + port
-                        + " (attempt " + attempt + "/" + MAX_RETRY_ATTEMPTS + ") — "
-                        + e.getMessage());
-
-                // Chờ trước khi thử lại
-                if (attempt < MAX_RETRY_ATTEMPTS) {
-                    try {
-                        Thread.sleep(RETRY_DELAY_MS);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                        break;
-                    }
-                }
-
-            } catch (SocketTimeoutException e) {
-                System.err.println("[ERROR] SocketClient: Timeout kết nối "
-                        + host + ":" + port
-                        + " (attempt " + attempt + "/" + MAX_RETRY_ATTEMPTS + ")");
-
-                if (attempt < MAX_RETRY_ATTEMPTS) {
-                    try {
-                        Thread.sleep(RETRY_DELAY_MS);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                        break;
-                    }
-                }
-
-            } catch (IOException e) {
-                System.err.println("[ERROR] SocketClient: Lỗi I/O gửi đến "
-                        + host + ":" + port + ": " + e.getMessage());
-                // Lỗi I/O chung → không retry (có thể lỗi cấu trúc dữ liệu)
-                break;
-            }
-        }
-
-        // Hết retry → thông báo thất bại
-        String errorMsg = "Không gửi được sau " + MAX_RETRY_ATTEMPTS + " lần thử";
-        System.err.println("[ERROR] SocketClient: " + shortId(packetId) + " — " + errorMsg);
-
-        if (callback != null) {
-            callback.onSendFailed(packetId, host, port, errorMsg);
-        }
-        return false;
-    }
-
-    // =========================================================
-    // GỬI JSON THÔ — KHÔNG CẦN MESHPACKET
-    // =========================================================
-
-    /**
-     * Gửi chuỗi JSON thô đến host:port — không retry, không callback.
-     * Dùng cho trường hợp đặc biệt (test, debug).
-     *
-     * @param host Địa chỉ host
-     * @param port Port đích
-     * @param json Chuỗi JSON cần gửi
-     * @return true nếu gửi thành công
-     */
-    public static boolean sendRaw(String host, int port, String json) {
         try (Socket socket = new Socket()) {
             socket.connect(new InetSocketAddress(host, port), CONNECTION_TIMEOUT_MS);
             socket.setSoTimeout(CONNECTION_TIMEOUT_MS);
-
-            PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
-            writer.println(json);
+            PrintWriter writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8), true);
+            writer.println(GSON.toJson(packet));
             writer.flush();
-
-            System.out.println("[SEND] SocketClient.sendRaw → " + host + ":" + port + " — OK");
+            if (writer.checkError()) throw new IOException("Không ghi được đầy đủ frame TCP");
+            log(packetId, "OUT", host, port, "SENT", "TCP write completed; not ACKED");
+            if (callback != null) callback.onSendSuccess(packetId, host, port);
             return true;
-
-        } catch (IOException e) {
-            System.err.println("[ERROR] SocketClient.sendRaw: " + host + ":" + port
-                    + " — " + e.getMessage());
+        } catch (IOException | IllegalArgumentException e) {
+            String message = "Không kết nối/gửi được: " + safeMessage(e);
+            log(packetId, "OUT", host, port, "DISCONNECTED", message);
+            notifyFailure(callback, packetId, host, port, message);
             return false;
         }
     }
 
-    // =========================================================
-    // GỬI BẤT ĐỒNG BỘ (NON-BLOCKING)
-    // =========================================================
-
-    /**
-     * Gửi MeshPacket trong một thread riêng — không block luồng gọi.
-     * Kết quả được thông báo qua callback (nếu có).
-     *
-     * @param host     Địa chỉ host
-     * @param port     Port đích
-     * @param packet   Gói tin cần gửi
-     * @param callback Callback thông báo kết quả
-     */
-    public static void sendAsync(String host, int port, MeshPacket packet, SendCallback callback) {
-        Thread sendThread = new Thread(() -> send(host, port, packet, callback),
-                "SocketClient-Async-" + shortId(packet != null ? packet.getPacketId() : "null"));
-        sendThread.setDaemon(true);
-        sendThread.start();
+    public static boolean sendRaw(String host, int port, String json) {
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(host, port), CONNECTION_TIMEOUT_MS);
+            PrintWriter writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8), true);
+            writer.println(json);
+            writer.flush();
+            return !writer.checkError();
+        } catch (IOException | IllegalArgumentException e) { return false; }
     }
 
-    // =========================================================
-    // UTILITY
-    // =========================================================
+    /** Returns false immediately if the bounded transport queue is full. */
+    public static boolean sendAsync(String host, int port, MeshPacket packet, SendCallback callback) {
+        try {
+            ASYNC_EXECUTOR.execute(() -> send(host, port, packet, callback));
+            return true;
+        } catch (java.util.concurrent.RejectedExecutionException e) {
+            String packetId = packet == null ? "UNKNOWN" : packet.getPacketId();
+            notifyFailure(callback, packetId, host, port, "Hàng đợi gửi đang đầy; thử lại sau.");
+            return false;
+        }
+    }
 
-    /**
-     * Trả về 8 ký tự đầu của ID để log ngắn gọn.
-     */
-    private static String shortId(String id) {
-        if (id == null) return "null";
-        return id.length() > 8 ? id.substring(0, 8) : id;
+    public static int getAsyncQueueSize() { return ASYNC_EXECUTOR.getQueue().size(); }
+
+    private static void notifyFailure(SendCallback callback, String packetId, String host, int port, String error) {
+        if (callback != null) callback.onSendFailed(packetId, host, port, error);
+    }
+    private static void log(String packetId, String direction, String host, int port, String state, String detail) {
+        System.out.println("[NET] ts=" + Instant.now() + " node=unknown packet=" + shortId(packetId)
+                + " direction=" + direction + " endpoint=" + host + ':' + port + " state=" + state + " " + detail);
+    }
+    private static String safeMessage(Throwable e) { return e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage(); }
+    private static String shortId(String id) { return id == null ? "unknown" : id.length() > 8 ? id.substring(0, 8) : id; }
+
+    private static final class DaemonThreadFactory implements ThreadFactory {
+        private final AtomicInteger sequence = new AtomicInteger();
+        @Override public Thread newThread(Runnable task) {
+            Thread thread = new Thread(task, "SocketClient-Transport-" + sequence.incrementAndGet());
+            thread.setDaemon(true);
+            return thread;
+        }
     }
 }

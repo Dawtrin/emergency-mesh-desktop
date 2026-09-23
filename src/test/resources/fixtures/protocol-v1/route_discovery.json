@@ -1,0 +1,40 @@
+{
+  "packet_id": "3d5f7a92-8c1e-4f3b-9a45-67890abcdef1",
+  "protocol_version": "1.0",
+  "packet_type": "ROUTE_DISCOVERY",
+  "source_node_id": "ANDROID_RELAY_01",
+  "destination_node_id": "BROADCAST",
+  "sender_hop_id": "ANDROID_RELAY_01",
+  "ttl": 3,
+  "hop_count": 0,
+  "timestamp": 1771240000000,
+  "payload": {
+    "sender_name": "ANDROID_RELAY_01",
+    "alert_type": "ROUTE_DISCOVERY",
+    "message": "Route discovery from ANDROID_RELAY_01",
+    "victim_count": 0,
+    "severity": "MEDIUM",
+    "discovery_info": {
+      "link_quality": 0.85,
+      "max_hops": 5,
+      "metric": "hop_count",
+      "network": {
+        "channel": 11,
+        "name": "RESCUE_MESH"
+      },
+      "preferred_relays": [
+        "ANDROID_RELAY_01",
+        "ANDROID_RELAY_02"
+      ],
+      "target_node_id": "BROADCAST"
+    },
+    "location": {
+      "latitude": 0.0,
+      "longitude": 0.0,
+      "altitude": 0.0,
+      "accuracy": 0.0
+    }
+  },
+  "route_history": [],
+  "checksum": "465cc4eb0ff7453710eba6a70dc8d1edb44ac28c81250f18c7fa0a3a1ba282ad"
+}

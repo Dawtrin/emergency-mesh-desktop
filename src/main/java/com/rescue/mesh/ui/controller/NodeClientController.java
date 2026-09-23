@@ -2,6 +2,8 @@ package com.rescue.mesh.ui.controller;
 
 import com.rescue.mesh.model.MeshPacket;
 import com.rescue.mesh.network.NodeConfig;
+import com.rescue.mesh.network.ReconnectPolicy;
+import com.rescue.mesh.network.ReconnectablePacketSender;
 import com.rescue.mesh.network.SocketServer;
 import com.rescue.mesh.routing.RoutingEngine;
 import com.rescue.mesh.util.PacketFactory;
@@ -21,6 +23,9 @@ import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.ResourceBundle;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * JavaFX Controller cho Node Giả Lập (Victim / Relay).
@@ -76,6 +81,14 @@ public class NodeClientController implements Initializable,
     private NodeConfig config;
     private RoutingEngine routingEngine;
     private SocketServer socketServer;
+    private ReconnectablePacketSender peerSender;
+    /** Bounded daemon work queue: rapid button presses cannot create unlimited threads. */
+    private final ThreadPoolExecutor networkActions = new ThreadPoolExecutor(
+            1, 1, 30, TimeUnit.SECONDS, new ArrayBlockingQueue<>(16), runnable -> {
+                Thread thread = new Thread(runnable, "Node-Network-Action");
+                thread.setDaemon(true);
+                return thread;
+            }, new ThreadPoolExecutor.AbortPolicy());
 
     /** Format thời gian cho log entries */
     private final SimpleDateFormat logTimeFormat = new SimpleDateFormat("HH:mm:ss");
@@ -133,8 +146,14 @@ public class NodeClientController implements Initializable,
 
         // Cập nhật header
         lblNodeId.setText(config.getNodeId());
-        lblNodeInfo.setText("Port: " + config.getListenPort()
-                + " → Next: " + (config.getNextHopPort() > 0 ? config.getNextHopPort() : "N/A"));
+        String nodeInfo = "Bind: " + config.getBindHost() + ":" + config.getListenPort()
+                + " → Next: " + (config.getNextHopPort() > 0
+                ? config.getNextHopHost() + ":" + config.getNextHopPort() : "N/A");
+        if (config.getMode() == NodeConfig.NodeMode.RELAY) {
+            nodeInfo += " | Victim: " + config.getVictimNodeId() + "@"
+                    + config.getVictimHost() + ":" + config.getVictimPort();
+        }
+        lblNodeInfo.setText(nodeInfo);
 
         // Ẩn form SOS nếu là RELAY mode
         if (config.getMode() == NodeConfig.NodeMode.RELAY) {
@@ -144,22 +163,46 @@ public class NodeClientController implements Initializable,
         }
 
         // Khởi tạo RoutingEngine — controller này implement callback
+        peerSender = new ReconnectablePacketSender(ReconnectPolicy.desktopDefault(), (state, message) ->
+                Platform.runLater(() -> {
+                    appendLog("[" + state + "] " + message);
+                    String type = state == com.rescue.mesh.network.ConnectionState.CONNECTED ? "connected"
+                            : state == com.rescue.mesh.network.ConnectionState.RETRY_WAIT || state == com.rescue.mesh.network.ConnectionState.CONNECTING ? "waiting"
+                            : "disconnected";
+                    setStatus(state + " — " + message, type);
+                }));
         routingEngine = new RoutingEngine(
                 config.getNodeId(),
                 config.getNextHopHost(),
                 config.getNextHopPort(),
-                this  // NodeClientController implements RoutingCallback
+                this,
+                peerSender
         );
+        if (config.getMode() == NodeConfig.NodeMode.RELAY) {
+            routingEngine.recordRoute(config.getVictimNodeId(),
+                    config.getVictimHost(), config.getVictimPort());
+            appendLog("[ROUTE] " + config.getVictimNodeId() + " → "
+                    + config.getVictimHost() + ":" + config.getVictimPort());
+        }
 
-        // Khởi động SocketServer — lắng nghe gói tin đến
-        socketServer = new SocketServer(
-                config.getListenPort(),
-                routingEngine,
-                this  // NodeClientController implements ServerEventListener
-        );
-        socketServer.start();
-
-        appendLog("[INFO] Node " + config.getNodeId() + " đang khởi tạo...");
+        // Khởi động SocketServer — lắng nghe đúng interface đã cấu hình
+        try {
+            socketServer = new SocketServer(
+                    config.getBindHost(),
+                    config.getListenPort(),
+                    routingEngine,
+                    this  // NodeClientController implements ServerEventListener
+            );
+            socketServer.start();
+            appendLog("[INFO] Node " + config.getNodeId() + " đang khởi tạo...");
+        } catch (IllegalStateException e) {
+            // Port conflict/bind failure must leave an actionable UI instead of
+            // failing the JavaFX startup with an opaque exception.
+            socketServer = null;
+            appendLog("[FATAL] Không thể mở " + config.getBindHost() + ":"
+                    + config.getListenPort() + " — " + e.getMessage());
+            setStatus("Lỗi port/cấu hình", "disconnected");
+        }
     }
 
     // =========================================================
@@ -171,36 +214,49 @@ public class NodeClientController implements Initializable,
      */
     @FXML
     private void onSendSos() {
-        // Đọc giá trị từ form
-        String senderName = txtSenderName.getText().trim();
-        if (senderName.isEmpty()) senderName = "Sinh Viên VKU";
+        // Đọc và xác thực giá trị từ form; không âm thầm thay bằng dữ liệu khác.
+        String senderName = txtSenderName.getText() != null ? txtSenderName.getText().trim() : "";
+        if (senderName.isEmpty()) {
+            appendLog("[VALIDATION] Tên người gửi không được để trống.");
+            return;
+        }
 
         String alertType = cboAlertType.getValue();
         String severity = cboSeverity.getValue();
+        if (alertType == null || severity == null) {
+            appendLog("[VALIDATION] Phải chọn loại cảnh báo và mức nghiêm trọng.");
+            return;
+        }
 
-        int victimCount = 1;
+        final int victimCount;
+        final double latitude;
+        final double longitude;
         try {
             victimCount = Integer.parseInt(txtVictimCount.getText().trim());
-        } catch (NumberFormatException e) {
-            appendLog("[WARN] Số nạn nhân không hợp lệ, dùng mặc định = 1");
-        }
-
-        double latitude = 15.9738;
-        try {
             latitude = Double.parseDouble(txtLatitude.getText().trim());
-        } catch (NumberFormatException e) {
-            appendLog("[WARN] Vĩ độ không hợp lệ, dùng mặc định = 15.9738");
-        }
-
-        double longitude = 108.2515;
-        try {
             longitude = Double.parseDouble(txtLongitude.getText().trim());
         } catch (NumberFormatException e) {
-            appendLog("[WARN] Kinh độ không hợp lệ, dùng mặc định = 108.2515");
+            appendLog("[VALIDATION] Số nạn nhân và tọa độ phải là số hợp lệ.");
+            return;
+        }
+        if (victimCount < 1) {
+            appendLog("[VALIDATION] Số nạn nhân phải lớn hơn hoặc bằng 1.");
+            return;
+        }
+        if (!Double.isFinite(latitude) || latitude < -90.0 || latitude > 90.0) {
+            appendLog("[VALIDATION] Vĩ độ phải nằm trong khoảng -90 đến 90.");
+            return;
+        }
+        if (!Double.isFinite(longitude) || longitude < -180.0 || longitude > 180.0) {
+            appendLog("[VALIDATION] Kinh độ phải nằm trong khoảng -180 đến 180.");
+            return;
         }
 
         String message = txtMessage.getText() != null ? txtMessage.getText().trim() : "";
-        if (message.isEmpty()) message = "Mắc kẹt tại Ký túc xá VKU, nước dâng cao!";
+        if (message.isEmpty()) {
+            appendLog("[VALIDATION] Nội dung yêu cầu cứu hộ không được để trống.");
+            return;
+        }
 
         // Tạo gói tin SOS
         MeshPacket sosPacket = PacketFactory.createSosPacket(
@@ -215,14 +271,11 @@ public class NodeClientController implements Initializable,
         );
 
         sentCount++;
-        appendLog("[SEND] SOS #" + sentCount + " — " + alertType + " / " + severity
-                + " / " + victimCount + " người");
+        appendLog("[QUEUED] SOS #" + sentCount + " " + shortId(sosPacket.getPacketId())
+                + " — " + alertType + " / " + severity + " / " + victimCount
+                + " người; đang chờ kết quả chuyển tiếp.");
 
-        // Xử lý trong background thread — không block UI
-        Thread sendThread = new Thread(() -> routingEngine.processPacket(sosPacket),
-                "SOS-Send-" + sentCount);
-        sendThread.setDaemon(true);
-        sendThread.start();
+        submitNetworkAction(sosPacket, "SOS");
     }
 
     /**
@@ -244,10 +297,8 @@ public class NodeClientController implements Initializable,
         );
 
         sentCount++;
-        Thread sendThread = new Thread(() -> routingEngine.processPacket(quickSos),
-                "QuickSOS-" + sentCount);
-        sendThread.setDaemon(true);
-        sendThread.start();
+        appendLog("[QUEUED] SOS nhanh " + shortId(quickSos.getPacketId()) + " đang chờ chuyển tiếp.");
+        submitNetworkAction(quickSos, "SOS nhanh");
     }
 
     /**
@@ -259,10 +310,7 @@ public class NodeClientController implements Initializable,
 
         MeshPacket heartbeat = PacketFactory.createHeartbeat(config.getNodeId());
 
-        Thread hbThread = new Thread(() -> routingEngine.processPacket(heartbeat),
-                "Heartbeat");
-        hbThread.setDaemon(true);
-        hbThread.start();
+        submitNetworkAction(heartbeat, "heartbeat");
     }
 
     // =========================================================
@@ -274,7 +322,8 @@ public class NodeClientController implements Initializable,
     @Override
     public void onPacketArrived(MeshPacket packet) {
         Platform.runLater(() -> {
-            if (MeshPacket.TYPE_DISPATCH_CMD.equals(packet.getPacketType())) {
+            if (MeshPacket.TYPE_DISPATCH_COMMAND.equals(packet.getPacketType())
+                    || MeshPacket.TYPE_DISPATCH_CMD.equals(packet.getPacketType())) {
                 // Hiển thị lệnh chỉ đạo
                 onDispatchReceived(packet);
             } else {
@@ -291,11 +340,16 @@ public class NodeClientController implements Initializable,
 
     @Override
     public void onPacketRelayed(MeshPacket packet, int nextHop) {
-        Platform.runLater(() ->
-                appendLog("[RELAY] " + shortId(packet.getPacketId())
-                        + " → port " + nextHop
-                        + " (TTL=" + packet.getTtl() + ", hops=" + packet.getHopCount() + ")")
-        );
+        Platform.runLater(() -> {
+            String lifecycle = MeshPacket.TYPE_DISPATCH_COMMAND.equals(packet.getPacketType())
+                    || MeshPacket.TYPE_DISPATCH_CMD.equals(packet.getPacketType())
+                    ? "FORWARDED DISPATCH"
+                    : MeshPacket.TYPE_ACK.equals(packet.getPacketType())
+                    ? "FORWARDED ACK" : "FORWARDED";
+            appendLog("[" + lifecycle + "] " + shortId(packet.getPacketId())
+                    + " → port " + nextHop
+                    + " (TTL=" + packet.getTtl() + ", hops=" + packet.getHopCount() + ")");
+        });
     }
 
     @Override
@@ -326,7 +380,8 @@ public class NodeClientController implements Initializable,
                         + "\nMức ưu tiên: " + packet.getPayload().getSeverity();
             }
             lblDispatchContent.setText(content);
-            appendLog("[INFO] *** NHẬN LỆNH CHỈ ĐẠO TỪ TRẠM CHỈ HUY ***");
+            appendLog("[DISPATCH RECEIVED] " + shortId(packet.getPacketId())
+                    + " — đã nhận hợp lệ; ACK đang được gửi về trạm chỉ huy.");
             if (packet.getPayload() != null) {
                 appendLog("[INFO]   " + packet.getPayload().getMessage());
             }
@@ -341,7 +396,7 @@ public class NodeClientController implements Initializable,
     public void onServerStarted(int port) {
         Platform.runLater(() -> {
             appendLog("[INFO] Server lắng nghe tại port " + port + " — OK");
-            setStatus("Đang lắng nghe", "connected");
+            setStatus("Đang lắng nghe cục bộ; chưa xác nhận peer", "waiting");
         });
     }
 
@@ -411,10 +466,22 @@ public class NodeClientController implements Initializable,
         return id.length() > 8 ? id.substring(0, 8) : id;
     }
 
+    private void submitNetworkAction(MeshPacket packet, String label) {
+        try {
+            networkActions.execute(() -> routingEngine.processPacket(packet));
+        } catch (java.util.concurrent.RejectedExecutionException e) {
+            appendLog("[RETRY_WAIT] Hàng đợi mạng đầy; " + label + " chưa được gửi. Vui lòng thử lại.");
+        }
+    }
+
     /**
      * Dọn dẹp tài nguyên khi đóng cửa sổ.
      */
     public void shutdown() {
+        networkActions.shutdownNow();
+        if (peerSender != null) {
+            peerSender.close();
+        }
         if (socketServer != null) {
             socketServer.stop();
         }

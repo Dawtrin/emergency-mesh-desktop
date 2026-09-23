@@ -1,0 +1,27 @@
+{
+  "packet_id": "4e6f8b03-9d2f-4a4c-8b56-78901bcdef23",
+  "protocol_version": "1.0",
+  "packet_type": "ACK",
+  "source_node_id": "BASE_STATION",
+  "destination_node_id": "ANDROID_VICTIM_01",
+  "sender_hop_id": "BASE_STATION",
+  "ttl": 5,
+  "hop_count": 0,
+  "timestamp": 1771240060000,
+  "payload": {
+    "sender_name": "BASE_STATION",
+    "alert_type": "ACK",
+    "message": "ACK for packet: 7b8f9e61-6d2c-4f10-9b34-8c8a2b53b811",
+    "victim_count": 0,
+    "severity": "MEDIUM",
+    "location": {
+      "latitude": 0.0,
+      "longitude": 0.0,
+      "altitude": 0.0,
+      "accuracy": 0.0
+    },
+    "ack_for_packet_id": "7b8f9e61-6d2c-4f10-9b34-8c8a2b53b811"
+  },
+  "route_history": [],
+  "checksum": "8dea238130aed9ccb562f80beeb5d7c23c4b824ff3a0f2078ee1e47a96169790"
+}

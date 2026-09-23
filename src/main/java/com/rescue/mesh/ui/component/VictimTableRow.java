@@ -1,6 +1,7 @@
 package com.rescue.mesh.ui.component;
 
 import com.rescue.mesh.model.MeshPacket;
+import com.rescue.mesh.storage.model.SosEventRecord;
 import javafx.beans.property.SimpleStringProperty;
 
 import java.text.SimpleDateFormat;
@@ -60,6 +61,9 @@ public class VictimTableRow {
     /** Gói tin gốc — lưu để tham chiếu khi gửi DISPATCH_CMD */
     private MeshPacket originalPacket;
 
+    /** ID duy nhất của SOS dùng để focus đúng marker, kể cả khi cùng một node gửi nhiều SOS. */
+    private final String markerId;
+
     /** Format thời gian hiển thị trên bảng */
     private static final SimpleDateFormat TIME_FORMAT = new SimpleDateFormat("HH:mm:ss");
 
@@ -73,7 +77,7 @@ public class VictimTableRow {
     public VictimTableRow(String stt, String sourceNode, String alertType,
                           String severity, String victimCount, String coordinates,
                           String time, String message, String routeHistory,
-                          String status, MeshPacket originalPacket) {
+                          String status, MeshPacket originalPacket, String markerId) {
         this.stt          = new SimpleStringProperty(stt);
         this.sourceNode   = new SimpleStringProperty(sourceNode);
         this.alertType    = new SimpleStringProperty(alertType);
@@ -85,6 +89,7 @@ public class VictimTableRow {
         this.routeHistory = new SimpleStringProperty(routeHistory);
         this.status       = new SimpleStringProperty(status);
         this.originalPacket = originalPacket;
+        this.markerId = markerId;
     }
 
     // =========================================================
@@ -145,7 +150,45 @@ public class VictimTableRow {
                 message,
                 routeHistory,
                 "PENDING",
-                packet
+                packet,
+                packet.getPacketId()
+        );
+    }
+
+    /**
+     * Tạo VictimTableRow từ bản ghi SosEventRecord được khôi phục từ SQLite.
+     *
+     * @param record Bản ghi SOS từ cơ sở dữ liệu
+     * @param index  Số thứ tự (bắt đầu từ 1)
+     * @return VictimTableRow sẵn sàng add vào TableView
+     */
+    public static VictimTableRow fromSosRecord(SosEventRecord record, int index) {
+        String sourceNode = record.getSourceNodeId() != null ? record.getSourceNodeId() : "N/A";
+        String alertType = record.getAlertType() != null ? record.getAlertType() : "N/A";
+        String severity = record.getSeverity() != null ? record.getSeverity() : "N/A";
+        String victimCount = String.valueOf(record.getVictimCount());
+        String coordinates = "N/A";
+        if (record.getLatitude() != null && record.getLongitude() != null) {
+            coordinates = String.format("%.4f, %.4f", record.getLatitude(), record.getLongitude());
+        }
+        String message = record.getMessage() != null ? record.getMessage() : "N/A";
+        String time = TIME_FORMAT.format(new Date(record.getTimestamp()));
+        String routeHistory = record.getRouteHistory() != null ? record.getRouteHistory() : "[]";
+        String status = record.getRescueStatus() != null ? record.getRescueStatus() : "PENDING";
+
+        return new VictimTableRow(
+                String.valueOf(index),
+                sourceNode,
+                alertType,
+                severity,
+                victimCount,
+                coordinates,
+                time,
+                message,
+                routeHistory,
+                status,
+                null,
+                record.getPacketId()
         );
     }
 
@@ -164,6 +207,7 @@ public class VictimTableRow {
     public String getRouteHistory() { return routeHistory.get(); }
     public String getStatus()       { return status.get(); }
     public MeshPacket getOriginalPacket() { return originalPacket; }
+    public String getMarkerId() { return markerId; }
 
     // =========================================================
     // PROPERTY GETTERS — cho JavaFX Data Binding

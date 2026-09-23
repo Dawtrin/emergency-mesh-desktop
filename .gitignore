@@ -1,14 +1,37 @@
 target/
+.gradle-home/
+.android-home/
+.android-user-home/
+.android-emulator-home/
+android-app/.gradle/
+android-app/build/
+android-app/app/build/
 !.mvn/wrapper/maven-wrapper.jar
-!.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.properties
 !**/src/main/**/target/
 !**/src/test/**/target/
 .kotlin
 
-# Script files (per user request)
+# Database runtime files
+*.db
+*.sqlite
+*.db-shm
+*.db-wal
+
+# Large offline map tiles and data
+*.mbtiles
+!src/test/resources/fixtures/test-tiles.mbtiles
+*.pbf
+*.osm
+
+# Script files (per user request, except wrapper)
 *.bat
 *.cmd
 *.ps1
+!mvnw
+!mvnw.cmd
+!scripts/preflight-demo.ps1
+!android-app/gradlew.bat
 
 # Local documentation files (not pushed to Git repository)
 src/DEFENSE_GUIDE.md
@@ -50,3 +73,6 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+# Offline map data (large MBTiles files)
+data/map/

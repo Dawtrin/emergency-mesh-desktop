@@ -1,0 +1,26 @@
+{
+  "packet_id": "5f7a9c14-0e3a-4b5d-9c67-89012cdef345",
+  "protocol_version": "1.0",
+  "packet_type": "HEARTBEAT",
+  "source_node_id": "ANDROID_RELAY_02",
+  "destination_node_id": "BASE_STATION",
+  "sender_hop_id": "ANDROID_RELAY_02",
+  "ttl": 5,
+  "hop_count": 0,
+  "timestamp": 1771240070000,
+  "payload": {
+    "sender_name": "ANDROID_RELAY_02",
+    "alert_type": "HEARTBEAT",
+    "message": "Node ANDROID_RELAY_02 is alive",
+    "victim_count": 0,
+    "severity": "MEDIUM",
+    "location": {
+      "latitude": 0.0,
+      "longitude": 0.0,
+      "altitude": 0.0,
+      "accuracy": 0.0
+    }
+  },
+  "route_history": [],
+  "checksum": "25dd683bb69a31a9cf627d2ff4891d57509b44bad90380aaf75b28f835bdaa34"
+}

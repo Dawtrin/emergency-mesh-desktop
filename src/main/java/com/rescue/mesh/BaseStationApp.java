@@ -90,24 +90,9 @@ public class BaseStationApp extends Application {
             FXMLLoader loader = new FXMLLoader(fxmlUrl);
             Parent root = loader.load();
 
-            // ── Lấy controller và khởi tạo station ──
+            // ── Lấy controller và truyền cấu hình topology đã được validate ──
             controller = loader.getController();
             controller.initializeStation(config);
-
-            // Đọc --relay-port và --relay-host từ args nếu có
-            List<String> params = getParameters().getRaw();
-            for (int i = 0; i < params.size() - 1; i++) {
-                if ("--relay-port".equalsIgnoreCase(params.get(i))) {
-                    try {
-                        int relayPort = Integer.parseInt(params.get(i + 1));
-                        controller.setRelayNodePort(relayPort);
-                    } catch (NumberFormatException e) {
-                        System.err.println("[WARN] relay-port không hợp lệ, dùng mặc định 8002");
-                    }
-                } else if ("--relay-host".equalsIgnoreCase(params.get(i))) {
-                    controller.setRelayHost(params.get(i + 1));
-                }
-            }
 
             // ── Tạo Scene + custom CSS ──
             Scene scene = new Scene(root, 1100, 780);
@@ -128,7 +113,8 @@ public class BaseStationApp extends Application {
             });
 
             primaryStage.show();
-            System.out.println("[INFO] BaseStationApp: GUI started — Port " + config.getListenPort());
+            System.out.println("[INFO] BaseStationApp: GUI started — "
+                    + config.getBindHost() + ":" + config.getListenPort());
 
         } catch (IOException e) {
             System.err.println("[ERROR] BaseStationApp: Không load được FXML — " + e.getMessage());

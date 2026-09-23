@@ -1,0 +1,204 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "7e3d7b0cb481b2f606ed846c195c07c6",
+    "entities": [
+      {
+        "tableName": "mesh_packets",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`packetId` TEXT NOT NULL, `packetJson` TEXT NOT NULL, `packetType` TEXT NOT NULL, `sourceNodeId` TEXT NOT NULL, `destinationNodeId` TEXT NOT NULL, `status` TEXT NOT NULL, `attempts` INTEGER NOT NULL, `nextAttemptAt` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `lastError` TEXT, PRIMARY KEY(`packetId`))",
+        "fields": [
+          {
+            "fieldPath": "packetId",
+            "columnName": "packetId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "packetJson",
+            "columnName": "packetJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "packetType",
+            "columnName": "packetType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sourceNodeId",
+            "columnName": "sourceNodeId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "destinationNodeId",
+            "columnName": "destinationNodeId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "attempts",
+            "columnName": "attempts",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nextAttemptAt",
+            "columnName": "nextAttemptAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastError",
+            "columnName": "lastError",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "packetId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_mesh_packets_destinationNodeId",
+            "unique": false,
+            "columnNames": [
+              "destinationNodeId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_mesh_packets_destinationNodeId` ON `${TABLE_NAME}` (`destinationNodeId`)"
+          },
+          {
+            "name": "index_mesh_packets_status_nextAttemptAt",
+            "unique": false,
+            "columnNames": [
+              "status",
+              "nextAttemptAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_mesh_packets_status_nextAttemptAt` ON `${TABLE_NAME}` (`status`, `nextAttemptAt`)"
+          }
+        ]
+      },
+      {
+        "tableName": "mesh_nodes",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`nodeId` TEXT NOT NULL, `host` TEXT, `port` INTEGER, `protocolVersion` TEXT NOT NULL, `lastSeenAt` INTEGER NOT NULL, `connected` INTEGER NOT NULL, PRIMARY KEY(`nodeId`))",
+        "fields": [
+          {
+            "fieldPath": "nodeId",
+            "columnName": "nodeId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "host",
+            "columnName": "host",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "port",
+            "columnName": "port",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "protocolVersion",
+            "columnName": "protocolVersion",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastSeenAt",
+            "columnName": "lastSeenAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "connected",
+            "columnName": "connected",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "nodeId"
+          ]
+        }
+      },
+      {
+        "tableName": "message_status",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`packetId` TEXT NOT NULL, `status` TEXT NOT NULL, `hopCount` INTEGER NOT NULL, `routeHistoryJson` TEXT NOT NULL, `updatedAt` INTEGER NOT NULL, `detail` TEXT, PRIMARY KEY(`packetId`))",
+        "fields": [
+          {
+            "fieldPath": "packetId",
+            "columnName": "packetId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hopCount",
+            "columnName": "hopCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "routeHistoryJson",
+            "columnName": "routeHistoryJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "detail",
+            "columnName": "detail",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "packetId"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7e3d7b0cb481b2f606ed846c195c07c6')"
+    ]
+  }
+}

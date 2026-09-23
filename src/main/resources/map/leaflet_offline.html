@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Emergency Mesh Rescue — Tactical Map</title>
 
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet CSS (bundled locally — no external dependency) -->
+    <link rel="stylesheet" href="leaflet/leaflet.css" />
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet JS (bundled locally — no external dependency) -->
+    <script src="leaflet/leaflet.js"></script>
 
     <style>
         /* ── Dark Tactical Map Styling ── */
@@ -27,15 +27,15 @@
             background: #121214;
         }
 
-        /* ── CSS Dark Mode Filter cho mọi Tile Layer (Đảm bảo luôn tối và không bị ô trắng) ── */
+        /* ── CSS Dark Mode Filter cho tile layers ── */
         .dark-tiles .leaflet-tile {
             filter: brightness(0.65) invert(1) contrast(3.5) hue-rotate(200deg) saturate(0.25) brightness(0.65);
         }
 
-        /* Tactical Grid nền khi tile đang tải */
+        /* Tactical Grid nền khi tile đang tải hoặc không có tile */
         .leaflet-container {
             background-color: #121214 !important;
-            background-image: 
+            background-image:
                 linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px) !important;
             background-size: 20px 20px !important;
@@ -137,68 +137,216 @@
             animation: pulse-sos 1.4s ease-out infinite;
             border-radius: 50%;
         }
+
+        /* Error overlay for missing/corrupt map */
+        #map-error-overlay {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+            background: rgba(28, 28, 30, 0.96);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 16px;
+            padding: 24px 32px;
+            text-align: center;
+            color: #FFFFFF;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            box-shadow: 0 12px 36px rgba(0,0,0,0.7);
+            backdrop-filter: blur(20px);
+            max-width: 400px;
+        }
+        #map-error-overlay .error-icon { font-size: 40px; margin-bottom: 12px; }
+        #map-error-overlay .error-title { font-size: 16px; font-weight: 700; color: #FF453A; margin-bottom: 8px; }
+        #map-error-overlay .error-detail { font-size: 13px; color: #8E8E93; line-height: 1.5; }
     </style>
 </head>
 <body>
 
 <div id="map"></div>
+<div id="map-error-overlay">
+    <div class="error-icon">🗺️</div>
+    <div class="error-title">OFFLINE MAP NOT AVAILABLE</div>
+    <div class="error-detail" id="map-error-detail">
+        Offline map file not found. Place an MBTiles file at data/map/region.mbtiles
+        or configure via --map-file argument.
+    </div>
+</div>
 
 <script>
     // ═══════════════════════════════════════════════════════════
-    //  BẢN ĐỒ TÁC CHIẾN TỰ ĐỘNG DỰ PHÒNG TILE LAYER (FALLBACK)
+    //  EMERGENCY MESH RESCUE — FULLY OFFLINE TACTICAL MAP
+    //  No external network dependencies. All tiles served locally.
     // ═══════════════════════════════════════════════════════════
 
-    // ── Khởi tạo bản đồ trung tâm: Trường ĐH CNTT&TT Việt - Hàn (VKU) — 15.9753, 108.2532 ──
-    var map = L.map('map', {
-        center: [15.9753, 108.2532],
-        zoom: 15,
-        zoomControl: true,
-        attributionControl: true,
-        preferCanvas: true // Tối ưu hiệu năng WebView JavaFX
-    });
-
-    // ── Tile Provider 1: CartoDB Dark Matter ──
-    var cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OSM &copy; CARTO',
-        subdomains: 'abcd',
-        maxZoom: 19,
-        minZoom: 4
-    });
-
-    // ── Tile Provider 2 (Fallback): OpenStreetMap với CSS Dark Filter ──
-    var osmDark = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
-        className: 'dark-tiles',
-        maxZoom: 19,
-        minZoom: 4
-    });
-
-    // Thêm CartoDark làm lớp chính, nếu lỗi tile tự động nạp OSM
-    cartoDark.addTo(map);
-
-    // Xử lý lỗi tile đơn lẻ
-    cartoDark.on('tileerror', function(error, tile) {
-        // Tự động chuyển lớp sang OSM nếu CartoDB gặp sự cố mạng
-        if (!map.hasLayer(osmDark)) {
-            map.removeLayer(cartoDark);
-            osmDark.addTo(map);
-            console.log('[MAP] Switching to backup dark tile provider (OSM)');
-        }
-    });
-
-    // ── Quản lý Markers & Routes ──
-    var markerGroup = L.layerGroup().addTo(map);
+    // ── State management ──
+    var mapReady = false;
+    var pendingMarkers = [];     // Queue for markers received before map readiness
+    var markersById = {};        // Map from unique SOS packet/event ID to marker
+    var markerGroup = null;
     var markers = [];
     var routeLines = [];
 
+    // ── Initialize map centered on VKU Da Nang ──
+    var map = L.map('map', {
+        center: [15.9753, 108.2532],
+        zoom: 15,
+        minZoom: 0,
+        zoomControl: true,
+        attributionControl: true,
+        preferCanvas: true
+    });
+
+    markerGroup = L.layerGroup().addTo(map);
+
     // ═══════════════════════════════════════════════════════════
-    //  JS BRIDGE FUNCTIONS (Gọi từ Java Controller)
+    //  TILE LAYER — Local tiles from loopback tile server
+    //  URL template is injected by Java via setTileUrl()
+    // ═══════════════════════════════════════════════════════════
+
+    var currentTileLayer = null;
+
+    /**
+     * Called from Java to configure the local tile server URL.
+     * @param {string} tileUrlTemplate - e.g. "http://127.0.0.1:54321/tiles/{z}/{x}/{y}.png"
+     */
+    function setTileUrl(tileUrlTemplate, mapConfig) {
+        if (currentTileLayer) {
+            map.removeLayer(currentTileLayer);
+        }
+
+        mapConfig = mapConfig || {};
+        currentTileLayer = L.tileLayer(tileUrlTemplate, {
+            attribution: 'Map data &copy; OpenStreetMap contributors (ODbL)',
+            className: 'dark-tiles',
+            maxZoom: 22,
+            minZoom: 0,
+            minNativeZoom: mapConfig.minNativeZoom,
+            maxNativeZoom: mapConfig.maxNativeZoom,
+            errorTileUrl: ''   // No fallback — show tactical grid background
+        });
+
+        currentTileLayer.addTo(map);
+
+        // Hide error overlay when tiles are configured
+        var overlay = document.getElementById('map-error-overlay');
+        if (overlay) overlay.style.display = 'none';
+
+        console.log('[MAP] Local tile layer configured: ' + tileUrlTemplate);
+    }
+
+    /**
+     * Called from Java when offline map file is missing or corrupt.
+     * @param {string} errorMsg - the error message to display
+     */
+    function showMapError(errorMsg) {
+        var overlay = document.getElementById('map-error-overlay');
+        var detail = document.getElementById('map-error-detail');
+        if (overlay && detail) {
+            detail.textContent = errorMsg || 'Offline map file not found.';
+            overlay.style.display = 'block';
+        }
+        console.log('[MAP] Error: ' + errorMsg);
+    }
+
+    /**
+     * Called from Java to signal that the map is fully ready.
+     * Replays any queued markers.
+     */
+    function onMapReady() {
+        mapReady = true;
+        console.log('[MAP] Map ready. Replaying ' + pendingMarkers.length + ' queued markers.');
+
+        // Replay pending markers exactly once
+        var pending = pendingMarkers.slice();
+        pendingMarkers = [];
+        for (var i = 0; i < pending.length; i++) {
+            var m = pending[i];
+            addSOSMarkerInternal(m.lat, m.lon, m.nodeId, m.markerId, m.severity, m.alertType, m.message, m.victimCount);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  JS BRIDGE FUNCTIONS (Called from Java Controller)
+    //  All string data is passed as JSON-serialized objects for safety.
     // ═══════════════════════════════════════════════════════════
 
     /**
-     * Thêm Marker SOS lên bản đồ khi Base Station nhận tín hiệu.
+     * Add an SOS marker. Called from Java via JSON bridge.
+     * @param {string} jsonData - JSON string with marker data
+     */
+    function addSOSMarkerFromJson(jsonData) {
+        try {
+            var data = JSON.parse(jsonData);
+            var lat = data.lat;
+            var lon = data.lon;
+            var nodeId = data.nodeId || '';
+            var markerId = data.markerId || nodeId;
+            var severity = data.severity || 'MEDIUM';
+            var alertType = data.alertType || '';
+            var message = data.message || '';
+            var victimCount = data.victimCount || 0;
+
+            // Validate coordinates
+            if (typeof lat !== 'number' || typeof lon !== 'number'
+                || !isFinite(lat) || !isFinite(lon)
+                || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+                console.log('[MAP] Invalid coordinates in marker data: ' + lat + ', ' + lon);
+                return 0;
+            }
+
+            if (!mapReady) {
+                // Queue the marker for replay when map becomes ready
+                pendingMarkers.push({
+                    lat: lat, lon: lon, nodeId: nodeId, markerId: markerId,
+                    severity: severity, alertType: alertType,
+                    message: message, victimCount: victimCount
+                });
+                console.log('[MAP] Marker queued (map not ready): ' + nodeId);
+                return -1; // signal: queued
+            }
+
+            return addSOSMarkerInternal(lat, lon, nodeId, markerId, severity, alertType, message, victimCount);
+        } catch (e) {
+            console.log('[MAP] Error parsing marker JSON: ' + e.message);
+            return 0;
+        }
+    }
+
+    /**
+     * Legacy bridge: addSOSMarker with positional arguments.
+     * Kept for backward compatibility but data should be pre-sanitized.
      */
     function addSOSMarker(lat, lon, nodeId, severity, alertType, message, victimCount) {
+        if (typeof lat !== 'number' || typeof lon !== 'number'
+            || !isFinite(lat) || !isFinite(lon)
+            || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+            console.log('[MAP] Invalid coordinates: ' + lat + ', ' + lon);
+            return 0;
+        }
+
+        if (!mapReady) {
+            pendingMarkers.push({
+                lat: lat, lon: lon, nodeId: String(nodeId || ''), markerId: String(nodeId || ''),
+                severity: String(severity || 'MEDIUM'),
+                alertType: String(alertType || ''),
+                message: String(message || ''),
+                victimCount: Number(victimCount) || 0
+            });
+            return -1;
+        }
+
+        return addSOSMarkerInternal(lat, lon,
+            String(nodeId || ''), String(nodeId || ''), String(severity || 'MEDIUM'),
+            String(alertType || ''), String(message || ''),
+            Number(victimCount) || 0);
+    }
+
+    /**
+     * Internal function to actually add a marker to the map.
+     */
+    function addSOSMarkerInternal(lat, lon, nodeId, markerId, severity, alertType, message, victimCount) {
         var color, className, badgeClass;
         switch (severity) {
             case 'CRITICAL':
@@ -209,15 +357,22 @@
                 color = '#FFD60A'; className = 'medium'; badgeClass = ''; break;
         }
 
-        var icon = '🆘';
+        var icon = '\u{1F198}';
         var typeText = 'Cứu hộ khẩn cấp';
         switch (alertType) {
             case 'MEDICAL':
-                icon = '🏥'; typeText = 'Cấp cứu Y tế'; break;
+                icon = '\u{1F3E5}'; typeText = 'Cấp cứu Y tế'; break;
             case 'FLOOD_TRAPPED':
-                icon = '🌊'; typeText = 'Kẹt do Lũ lụt'; break;
+                icon = '\u{1F30A}'; typeText = 'Kẹt do Lũ lụt'; break;
             case 'LANDSLIDE':
-                icon = '⛰️'; typeText = 'Sạt lở Đất đá'; break;
+                icon = '\u{26F0}\uFE0F'; typeText = 'Sạt lở Đất đá'; break;
+        }
+
+        // Sanitize display text to prevent XSS
+        function escHtml(s) {
+            var div = document.createElement('div');
+            div.appendChild(document.createTextNode(s));
+            return div.innerHTML;
         }
 
         var markerIcon = L.divIcon({
@@ -238,15 +393,15 @@
         });
 
         var popupContent = '<div class="sos-popup">'
-            + '<h3 class="' + className + '">' + icon + ' ' + severity + ' — ' + typeText + '</h3>'
+            + '<h3 class="' + className + '">' + icon + ' ' + escHtml(severity) + ' \u2014 ' + escHtml(typeText) + '</h3>'
             + '<div class="info-row"><span class="info-label">Node Gửi</span>'
-            + '<span class="info-value">' + nodeId + '</span></div>'
+            + '<span class="info-value">' + escHtml(nodeId) + '</span></div>'
             + '<div class="info-row"><span class="info-label">Số Nạn Nhân</span>'
-            + '<span class="info-value" style="color:' + color + ';">' + victimCount + ' người</span></div>'
+            + '<span class="info-value" style="color:' + color + ';">' + escHtml(String(victimCount)) + ' người</span></div>'
             + '<div class="info-row"><span class="info-label">Tọa Độ GPS</span>'
             + '<span class="info-value">' + lat.toFixed(4) + ', ' + lon.toFixed(4) + '</span></div>'
             + '<div style="margin-top:8px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.08); color:#E5E5EA; font-size:12.5px; font-style:italic;">'
-            + '“' + (message || 'Cần hỗ trợ khẩn cấp!') + '”'
+            + '\u201C' + escHtml(message || 'Cần hỗ trợ khẩn cấp!') + '\u201D'
             + '</div>'
             + '</div>';
 
@@ -255,14 +410,15 @@
             .addTo(markerGroup);
 
         markers.push(marker);
+        markersById[markerId] = marker;
 
-        // Zoom mượt mà đến vị trí nạn nhân
+        // Smooth zoom to victim position
         map.flyTo([lat, lon], Math.max(map.getZoom(), 14), {
             animate: true,
             duration: 1.0
         });
 
-        // Tự động mở popup sau khi zoom
+        // Auto-open popup after zoom
         setTimeout(function() {
             marker.openPopup();
         }, 1100);
@@ -271,9 +427,70 @@
     }
 
     /**
-     * Thêm Marker Base Station cố định
+     * Focus on a specific marker by unique SOS marker ID. Called from Java when a table row is selected.
+     * @param {string} markerId - packet/event ID of the SOS to focus on
+     */
+    function focusMarker(markerId) {
+        var marker = markersById[markerId];
+        if (marker) {
+            var latlng = marker.getLatLng();
+            map.flyTo(latlng, Math.max(map.getZoom(), 15), {
+                animate: true,
+                duration: 0.8
+            });
+            setTimeout(function() {
+                marker.openPopup();
+            }, 900);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Draw a route line between coordinates. Called from Java.
+     * @param {string} jsonCoords - JSON array of [lat, lon] pairs
+     */
+    function drawRoute(jsonCoords) {
+        try {
+            var coords = JSON.parse(jsonCoords);
+            if (!Array.isArray(coords) || coords.length < 2) return false;
+
+            // Validate all coordinate pairs
+            var validCoords = [];
+            for (var i = 0; i < coords.length; i++) {
+                var c = coords[i];
+                if (Array.isArray(c) && c.length >= 2
+                    && isFinite(c[0]) && isFinite(c[1])
+                    && c[0] >= -90 && c[0] <= 90
+                    && c[1] >= -180 && c[1] <= 180) {
+                    validCoords.push([c[0], c[1]]);
+                }
+            }
+
+            if (validCoords.length < 2) return false;
+
+            var line = L.polyline(validCoords, {
+                color: '#0A84FF',
+                weight: 3,
+                opacity: 0.7,
+                dashArray: '8, 4'
+            }).addTo(map);
+
+            routeLines.push(line);
+            return true;
+        } catch (e) {
+            console.log('[MAP] Error drawing route: ' + e.message);
+            return false;
+        }
+    }
+
+    /**
+     * Add Base Station marker.
      */
     function addBaseStationMarker(lat, lon) {
+        if (typeof lat !== 'number' || typeof lon !== 'number'
+            || !isFinite(lat) || !isFinite(lon)) return;
+
         var bsIcon = L.divIcon({
             className: 'base-station-marker',
             html: '<div style="'
@@ -284,24 +501,38 @@
                 + 'font-size: 22px;'
                 + 'border: 3px solid #FFFFFF;'
                 + 'box-shadow: 0 0 25px rgba(10,132,255,0.8);'
-                + '">🏛️</div>',
+                + '">\u{1F3DB}\uFE0F</div>',
             iconSize: [42, 42],
             iconAnchor: [21, 21],
             popupAnchor: [0, -24]
         });
 
         L.marker([lat, lon], { icon: bsIcon })
-            .bindPopup('<div class="sos-popup"><h3 style="color:#0A84FF">🏛️ TRẠM CHỈ HUY TRUNG TÂM</h3>'
-                + '<div class="info-row"><span class="info-label">Trạng Thái</span><span class="info-value" style="color:#30D158">Sẵn sàng (Port 8888)</span></div>'
+            .bindPopup('<div class="sos-popup"><h3 style="color:#0A84FF">\u{1F3DB}\uFE0F TRẠM CHỈ HUY TRUNG TÂM</h3>'
+                + '<div class="info-row"><span class="info-label">Trạng Thái</span><span class="info-value" style="color:#30D158">Sẵn sàng</span></div>'
                 + '<div class="info-row"><span class="info-label">Tọa Độ</span><span class="info-value">' + lat.toFixed(4) + ', ' + lon.toFixed(4) + '</span></div>'
                 + '</div>')
             .addTo(markerGroup);
     }
 
-    // Khởi tạo Marker Base Station tại Trung tâm Chỉ huy VKU (15.9753, 108.2532)
+    /**
+     * Returns the number of queued markers (for Java to check).
+     */
+    function getPendingMarkerCount() {
+        return pendingMarkers.length;
+    }
+
+    /**
+     * Returns the total number of placed markers.
+     */
+    function getMarkerCount() {
+        return markers.length;
+    }
+
+    // Initialize Base Station marker at VKU Da Nang
     addBaseStationMarker(15.9753, 108.2532);
 
-    console.log('[MAP] Tactical Leaflet Map initialized — Center: VKU Danang (15.9753, 108.2532)');
+    console.log('[MAP] Tactical Leaflet Map initialized (OFFLINE MODE) — Center: VKU Danang (15.9753, 108.2532)');
 </script>
 
 </body>

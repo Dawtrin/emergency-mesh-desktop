@@ -62,7 +62,7 @@ public class CoreMeshSystemTest {
         assertNotNull(packet.getPacketId());
         assertEquals("NODE_A_VICTIM", packet.getSourceNodeId());
         assertEquals(MeshPacket.NODE_BASE_STATION, packet.getDestinationNodeId());
-        assertEquals(MeshPacket.TYPE_SOS_DATA, packet.getPacketType());
+        assertEquals(MeshPacket.TYPE_SOS_BROADCAST, packet.getPacketType());
         assertEquals(5, packet.getTtl());
         assertEquals(0, packet.getHopCount());
         assertNotNull(packet.getRouteHistory());
@@ -243,6 +243,126 @@ public class CoreMeshSystemTest {
 
         assertTrue(dropped.get(), "Gói tin có TTL <= 0 phải bị DROP");
         assertEquals("TTL_EXPIRED", reasonRef.get());
+        engine.shutdown();
+    }
+
+    @Test
+    @DisplayName("RoutingEngine: Gói tin lỗi checksum bị DROP mà KHÔNG lưu vào SeenPacketCache (gói hợp lệ sau đó vẫn được xử lý)")
+    void testRoutingEngineCorruptChecksumThenValidPacketNotDroppedAsDuplicate() {
+        AtomicBoolean arrived = new AtomicBoolean(false);
+        AtomicInteger dropCount = new AtomicInteger(0);
+        AtomicReference<String> lastDropReason = new AtomicReference<>();
+
+        RoutingEngine.RoutingCallback callback = new RoutingEngine.RoutingCallback() {
+            @Override
+            public void onPacketArrived(MeshPacket packet) {
+                arrived.set(true);
+            }
+            @Override public void onPacketRelayed(MeshPacket packet, int nextHop) {}
+            @Override
+            public void onPacketDropped(String packetId, String reason) {
+                dropCount.incrementAndGet();
+                lastDropReason.set(reason);
+            }
+            @Override public void onForwardError(int nextHop, String errorMessage) {}
+            @Override public void onDispatchReceived(MeshPacket packet) {}
+        };
+
+        RoutingEngine engine = new RoutingEngine(
+                MeshPacket.NODE_BASE_STATION,
+                "localhost",
+                -1,
+                callback
+        );
+
+        MeshPacket validPacket = PacketFactory.createSosPacket(
+                "NODE_A", "Victim", MeshPacket.ALERT_FLOOD,
+                "Need rescue", 1, MeshPacket.SEVERITY_HIGH, 16.0, 108.0
+        );
+        String packetId = validPacket.getPacketId();
+
+        // 1. Tạo gói tin hỏng checksum nhưng cùng packetId
+        MeshPacket corruptPacket = PacketFactory.createSosPacket(
+                "NODE_A", "Victim", MeshPacket.ALERT_FLOOD,
+                "Need rescue", 1, MeshPacket.SEVERITY_HIGH, 16.0, 108.0
+        );
+        corruptPacket.setPacketId(packetId);
+        corruptPacket.setChecksum("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
+
+        // Gửi corrupt packet
+        engine.processPacket(corruptPacket);
+
+        assertEquals(1, dropCount.get());
+        assertEquals("CHECKSUM_FAIL", lastDropReason.get());
+        assertFalse(arrived.get(), "Gói corrupt checksum không được coi là đã tới");
+        assertEquals(0, engine.getCacheSize(), "SeenPacketCache không được chứa packetId của gói corrupt");
+
+        // 2. Gửi valid packet có cùng packetId
+        engine.processPacket(validPacket);
+
+        assertTrue(arrived.get(), "Gói hợp lệ cùng packetId phải được xử lý thành công, không bị coi là DUPLICATE");
+        assertEquals(1, dropCount.get(), "Drop count không được tăng thêm");
+        assertEquals(1, engine.getCacheSize(), "SeenPacketCache chỉ được ghi nhận sau khi vượt qua validation và checksum");
+
+        // 3. Gửi lại valid packet lần nữa -> Giờ mới bị coi là DUPLICATE
+        engine.processPacket(validPacket);
+        assertEquals(2, dropCount.get());
+        assertEquals("DUPLICATE", lastDropReason.get());
+
+        engine.shutdown();
+    }
+
+    @Test
+    @DisplayName("RoutingEngine: Gói tin vi phạm cấu trúc bị DROP trước SeenPacketCache")
+    void testRoutingEngineInvalidStructureDroppedBeforeCache() {
+        AtomicBoolean arrived = new AtomicBoolean(false);
+        AtomicInteger dropCount = new AtomicInteger(0);
+        AtomicReference<String> lastDropReason = new AtomicReference<>();
+
+        RoutingEngine.RoutingCallback callback = new RoutingEngine.RoutingCallback() {
+            @Override public void onPacketArrived(MeshPacket packet) { arrived.set(true); }
+            @Override public void onPacketRelayed(MeshPacket packet, int nextHop) {}
+            @Override public void onPacketDropped(String packetId, String reason) {
+                dropCount.incrementAndGet();
+                lastDropReason.set(reason);
+            }
+            @Override public void onForwardError(int nextHop, String errorMessage) {}
+            @Override public void onDispatchReceived(MeshPacket packet) {}
+        };
+
+        RoutingEngine engine = new RoutingEngine(
+                MeshPacket.NODE_BASE_STATION,
+                "localhost",
+                -1,
+                callback
+        );
+
+        MeshPacket validPacket = PacketFactory.createSosPacket(
+                "NODE_A", "Victim", MeshPacket.ALERT_FLOOD,
+                "Need rescue", 1, MeshPacket.SEVERITY_HIGH, 16.0, 108.0
+        );
+        String packetId = validPacket.getPacketId();
+
+        // Gói cấu trúc sai: sender_name rỗng
+        MeshPacket invalidStructPacket = PacketFactory.createSosPacket(
+                "NODE_A", "Victim", MeshPacket.ALERT_FLOOD,
+                "Need rescue", 1, MeshPacket.SEVERITY_HIGH, 16.0, 108.0
+        );
+        invalidStructPacket.setPacketId(packetId);
+        invalidStructPacket.getPayload().setSenderName("");
+        invalidStructPacket.computeAndSetChecksum(gson);
+
+        engine.processPacket(invalidStructPacket);
+
+        assertEquals(1, dropCount.get());
+        assertTrue(lastDropReason.get().startsWith("VALIDATION_FAILED"), "Lý do drop phải bắt đầu bằng VALIDATION_FAILED");
+        assertEquals(0, engine.getCacheSize(), "SeenPacketCache không được ghi nhận gói cấu trúc sai");
+
+        // Gửi gói hợp lệ -> xử lý bình thường
+        engine.processPacket(validPacket);
+        assertTrue(arrived.get());
+        assertEquals(1, engine.getCacheSize());
+
         engine.shutdown();
     }
 }

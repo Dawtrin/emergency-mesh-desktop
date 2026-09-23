@@ -8,6 +8,7 @@ import javax.sound.sampled.LineUnavailableException;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.URL;
+import javafx.scene.media.AudioClip;
 
 /**
  * Trình phát âm thanh báo động SOS cho Base Station.
@@ -61,6 +62,9 @@ public class AlarmPlayer {
 
     /** Clip âm thanh hiện tại — null nếu chưa khởi tạo */
     private Clip currentClip;
+
+    /** JavaFX clip used when a packaged alarm asset is available. */
+    private AudioClip currentFxClip;
 
     /** Trạng thái đang phát — volatile cho thread visibility */
     private volatile boolean playing = false;
@@ -189,8 +193,9 @@ public class AlarmPlayer {
         // Dừng clip cũ nếu đang phát
         stopInternal();
 
-        // Thử phương pháp 1: Load alarm.mp3 từ resources
-        boolean loaded = tryLoadFromResources();
+        // Thử phương pháp 1: Load alarm.mp3 từ resources bằng JavaFX AudioClip
+        // (the technology used by the desktop specification).
+        boolean loaded = tryLoadFromResources(loop);
 
         // Phương pháp 2: Dùng siren tự tạo
         if (!loaded) {
@@ -213,18 +218,19 @@ public class AlarmPlayer {
      *
      * @return true nếu load và phát thành công
      */
-    private boolean tryLoadFromResources() {
+    private boolean tryLoadFromResources(boolean loop) {
         try {
             URL soundUrl = getClass().getResource("/sound/alarm.mp3");
             if (soundUrl == null) {
                 return false;
             }
 
-            currentClip = AudioSystem.getClip();
-            currentClip.open(AudioSystem.getAudioInputStream(soundUrl));
-            currentClip.start();
+            currentFxClip = new AudioClip(soundUrl.toExternalForm());
+            currentFxClip.setVolume(volume);
+            currentFxClip.setCycleCount(loop ? AudioClip.INDEFINITE : 1);
+            currentFxClip.play();
             playing = true;
-            System.out.println("[INFO] AlarmPlayer: phát alarm.mp3 từ resources — OK");
+            System.out.println("[INFO] AlarmPlayer: phát alarm.mp3 bằng JavaFX AudioClip — OK");
             return true;
 
         } catch (Exception e) {
@@ -306,6 +312,14 @@ public class AlarmPlayer {
      */
     private void stopInternal() {
         playing = false;
+        if (currentFxClip != null) {
+            try {
+                currentFxClip.stop();
+            } catch (Exception e) {
+                System.err.println("[ERROR] AlarmPlayer.stop: " + e.getMessage());
+            }
+            currentFxClip = null;
+        }
         if (currentClip != null) {
             try {
                 if (currentClip.isRunning()) {

@@ -1,6 +1,8 @@
 package com.rescue.mesh.model;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.annotations.SerializedName;
 import com.rescue.mesh.util.ChecksumUtil;
 
 import java.util.ArrayList;
@@ -8,104 +10,121 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Cấu trúc gói tin chuẩn của hệ thống Emergency Mesh Rescue.
+ * Cấu trúc gói tin chuẩn canonical v1.0 của hệ thống Emergency Mesh Rescue.
  *
- * Cơ sở lý thuyết:
- *   - TTL (Time-To-Live): Lấy ý tưởng từ IPv4 Header (RFC 791).
- *     Giới hạn số bước nhảy tối đa, tránh gói tin lưu thông vô hạn.
- *   - routeHistory: Tương đương Source Route trong IPv6 (RFC 2460).
- *     Ghi lại đường đi để debug và hiển thị trực quan trên bản đồ.
- *   - packetId (UUID): Định danh duy nhất để SeenPacketCache phát hiện duplicate.
- *   - checksum (SHA-256): Đảm bảo Data Integrity theo RFC 6234.
+ * Chuẩn hóa schema JSON snake_case theo tài liệu docs/protocol/mesh-packet-v1.md.
+ * Hỗ trợ đọc cả alias cũ (SOS_DATA, DISPATCH_CMD, camelCase) để đảm bảo tương thích ngược.
  *
- * Serialization: Dùng Gson (JSON) thay vì Java Serialization vì:
- *   - Human-readable → dễ debug
- *   - Platform-agnostic → Android giai đoạn 2 dùng được nguyên vẹn
- *   - Không có lỗ hổng deserialization như Java native serialization
- *
- * QUAN TRỌNG: Class này là POJO thuần — không biết gì về UI, Socket, hay threading.
+ * QUAN TRỌNG: Checksum SHA-256 là mã băm kiểm tra tính toàn vẹn (Data Integrity),
+ * không phải cơ chế xác thực danh tính (Authentication).
  */
 public class MeshPacket {
 
-    // ===== HẰNG SỐ LOẠI GÓI TIN =====
-    public static final String TYPE_SOS_DATA     = "SOS_DATA";
-    public static final String TYPE_DISPATCH_CMD = "DISPATCH_CMD";
-    public static final String TYPE_ACK          = "ACK";
-    public static final String TYPE_HEARTBEAT    = "HEARTBEAT";
+    // ===== PHIÊN BẢN GIAO THỨC =====
+    public static final String PROTOCOL_VERSION_1 = "1.0";
+
+    // ===== HẰNG SỐ LOẠI GÓI TIN CANONICAL V1 =====
+    public static final String TYPE_SOS_BROADCAST    = "SOS_BROADCAST";
+    public static final String TYPE_DISPATCH_COMMAND  = "DISPATCH_COMMAND";
+    public static final String TYPE_ROUTE_DISCOVERY  = "ROUTE_DISCOVERY";
+    public static final String TYPE_ACK              = "ACK";
+    public static final String TYPE_HEARTBEAT        = "HEARTBEAT";
+
+    // ===== ALIAS CŨ CHO TƯƠNG THÍCH NGƯỢC (DEPRECATED) =====
+    @Deprecated
+    public static final String TYPE_SOS_DATA         = "SOS_DATA";
+    @Deprecated
+    public static final String TYPE_DISPATCH_CMD     = "DISPATCH_CMD";
 
     // ===== HẰNG SỐ MỨC ĐỘ NGUY HIỂM =====
-    public static final String SEVERITY_CRITICAL = "CRITICAL";
-    public static final String SEVERITY_HIGH     = "HIGH";
-    public static final String SEVERITY_MEDIUM   = "MEDIUM";
+    public static final String SEVERITY_CRITICAL     = "CRITICAL";
+    public static final String SEVERITY_HIGH         = "HIGH";
+    public static final String SEVERITY_MEDIUM       = "MEDIUM";
 
     // ===== HẰNG SỐ LOẠI TÌNH HUỐNG =====
-    public static final String ALERT_MEDICAL      = "MEDICAL";
-    public static final String ALERT_FLOOD        = "FLOOD_TRAPPED";
-    public static final String ALERT_LANDSLIDE    = "LANDSLIDE";
+    public static final String ALERT_MEDICAL         = "MEDICAL";
+    public static final String ALERT_FLOOD           = "FLOOD_TRAPPED";
+    public static final String ALERT_LANDSLIDE       = "LANDSLIDE";
 
     // ===== HẰNG SỐ NODE ID =====
-    public static final String NODE_BASE_STATION = "BASE_STATION";
-    public static final String NODE_A_VICTIM     = "NODE_A_VICTIM";
-    public static final String NODE_B_RELAY      = "NODE_B_RELAY";
+    public static final String NODE_BASE_STATION     = "BASE_STATION";
+    public static final String NODE_A_VICTIM         = "NODE_A_VICTIM";
+    public static final String NODE_B_RELAY          = "NODE_B_RELAY";
+    public static final String NODE_BROADCAST        = "BROADCAST";
 
     // ===== TTL MẶC ĐỊNH =====
-    public static final int DEFAULT_TTL = 5;
+    public static final int DEFAULT_TTL              = 5;
 
-    // ===== FIELDS =====
+    // ===== CANONICAL FIELDS =====
 
-    /** UUID duy nhất — dùng bởi SeenPacketCache để chống lặp */
+    @SerializedName(value = "packet_id", alternate = {"packetId"})
     private String packetId;
 
-    /** Loại gói tin: SOS_DATA / DISPATCH_CMD / ACK / HEARTBEAT */
+    @SerializedName(value = "protocol_version", alternate = {"protocolVersion"})
+    private String protocolVersion = PROTOCOL_VERSION_1;
+
+    @SerializedName(value = "packet_type", alternate = {"packetType"})
     private String packetType;
 
-    /** ID của node tạo ra gói tin (nguồn gốc ban đầu) */
+    @SerializedName(value = "source_node_id", alternate = {"sourceNodeId"})
     private String sourceNodeId;
 
-    /** ID của node đích cuối cùng */
+    @SerializedName(value = "destination_node_id", alternate = {"destinationNodeId"})
     private String destinationNodeId;
 
-    /** ID của node vừa gửi gói tin này (thay đổi mỗi hop) */
+    @SerializedName(value = "sender_hop_id", alternate = {"senderHopId"})
     private String senderHopId;
 
-    /** Số bước nhảy tối đa còn lại — giảm 1 mỗi relay. Drop khi TTL ≤ 1 */
+    @SerializedName("ttl")
     private int ttl;
 
-    /** Đếm số bước nhảy đã thực hiện — tăng 1 mỗi relay */
+    @SerializedName(value = "hop_count", alternate = {"hopCount"})
     private int hopCount;
 
-    /** Thời điểm tạo gói tin (Unix timestamp milliseconds) */
+    @SerializedName("timestamp")
     private long timestamp;
 
-    /** Nội dung chính của gói tin */
+    @SerializedName("payload")
     private Payload payload;
 
-    /** Lịch sử các node đã relay: ["NODE_A", "NODE_B", ...] */
+    @SerializedName(value = "route_history", alternate = {"routeHistory"})
     private List<String> routeHistory;
 
-    /** SHA-256 của payload JSON — kiểm tra tính toàn vẹn dữ liệu */
+    @SerializedName("checksum")
     private String checksum;
 
     // ===== INNER CLASS: PAYLOAD =====
 
     /**
-     * Nội dung chính của gói tin SOS/DISPATCH.
+     * Nội dung nghiệp vụ của gói tin.
      */
     public static class Payload {
 
+        @SerializedName(value = "sender_name", alternate = {"senderName"})
         private String senderName;
 
-        /** MEDICAL / FLOOD_TRAPPED / LANDSLIDE */
+        @SerializedName(value = "alert_type", alternate = {"alertType"})
         private String alertType;
 
+        @SerializedName("message")
         private String message;
 
+        @SerializedName(value = "victim_count", alternate = {"victimCount"})
         private int victimCount;
 
-        /** CRITICAL / HIGH / MEDIUM */
+        @SerializedName("severity")
         private String severity;
 
+        @SerializedName("location")
         private Location location;
+
+        @SerializedName(value = "ack_for_packet_id", alternate = {"ackForPacketId"})
+        private String ackForPacketId;
+
+        @SerializedName(value = "discovery_info", alternate = {"discoveryInfo"})
+        private JsonElement discoveryInfo;
+
+        public Payload() {}
 
         // --- Getters & Setters ---
 
@@ -127,6 +146,21 @@ public class MeshPacket {
         public Location getLocation() { return location; }
         public void setLocation(Location location) { this.location = location; }
 
+        public String getAckForPacketId() { return ackForPacketId; }
+        public void setAckForPacketId(String ackForPacketId) { this.ackForPacketId = ackForPacketId; }
+
+        public JsonElement getDiscoveryInfo() { return discoveryInfo; }
+        public void setDiscoveryInfo(JsonElement discoveryInfo) { this.discoveryInfo = discoveryInfo; }
+        public void setDiscoveryInfo(Object discoveryInfo) {
+            if (discoveryInfo == null) {
+                this.discoveryInfo = null;
+            } else if (discoveryInfo instanceof JsonElement) {
+                this.discoveryInfo = (JsonElement) discoveryInfo;
+            } else {
+                this.discoveryInfo = ChecksumUtil.toJsonElement(discoveryInfo);
+            }
+        }
+
         @Override
         public String toString() {
             return "Payload{"
@@ -134,6 +168,7 @@ public class MeshPacket {
                     + ", alertType='" + alertType + '\''
                     + ", severity='" + severity + '\''
                     + ", victimCount=" + victimCount
+                    + ", ackForPacketId='" + ackForPacketId + '\''
                     + ", location=" + location
                     + '}';
         }
@@ -142,18 +177,33 @@ public class MeshPacket {
     // ===== INNER CLASS: LOCATION =====
 
     /**
-     * Tọa độ địa lý GPS của nạn nhân.
+     * Tọa độ địa lý GPS của sự cố/nạn nhân.
      */
     public static class Location {
 
+        @SerializedName(value = "latitude", alternate = {"lat"})
         private double latitude;
+
+        @SerializedName(value = "longitude", alternate = {"lon", "lng"})
         private double longitude;
+
+        @SerializedName(value = "altitude", alternate = {"alt"})
+        private double altitude = 0.0;
+
+        @SerializedName(value = "accuracy", alternate = {"acc"})
+        private double accuracy = 0.0;
 
         public Location() {}
 
         public Location(double latitude, double longitude) {
+            this(latitude, longitude, 0.0, 0.0);
+        }
+
+        public Location(double latitude, double longitude, double altitude, double accuracy) {
             this.latitude  = latitude;
             this.longitude = longitude;
+            this.altitude  = altitude;
+            this.accuracy  = accuracy;
         }
 
         public double getLatitude()  { return latitude; }
@@ -162,28 +212,28 @@ public class MeshPacket {
         public double getLongitude() { return longitude; }
         public void setLongitude(double longitude) { this.longitude = longitude; }
 
+        public double getAltitude()  { return altitude; }
+        public void setAltitude(double altitude) { this.altitude = altitude; }
+
+        public double getAccuracy()  { return accuracy; }
+        public void setAccuracy(double accuracy) { this.accuracy = accuracy; }
+
         @Override
         public String toString() {
-            return "Location{lat=" + latitude + ", lon=" + longitude + '}';
+            return "Location{lat=" + latitude + ", lon=" + longitude + ", alt=" + altitude + ", acc=" + accuracy + '}';
         }
     }
 
     // ===== CONSTRUCTORS =====
 
-    /** Constructor không tham số — cần cho Gson deserialization */
     public MeshPacket() {
+        this.protocolVersion = PROTOCOL_VERSION_1;
         this.routeHistory = new ArrayList<>();
     }
 
-    /**
-     * Constructor đầy đủ để tạo gói tin mới.
-     *
-     * @param packetType       Loại gói tin (dùng hằng TYPE_*)
-     * @param sourceNodeId     ID node nguồn
-     * @param destinationNodeId ID node đích
-     */
     public MeshPacket(String packetType, String sourceNodeId, String destinationNodeId) {
         this.packetId          = UUID.randomUUID().toString();
+        this.protocolVersion   = PROTOCOL_VERSION_1;
         this.packetType        = packetType;
         this.sourceNodeId      = sourceNodeId;
         this.destinationNodeId = destinationNodeId;
@@ -197,62 +247,67 @@ public class MeshPacket {
     // ===== CHECKSUM METHODS =====
 
     /**
-     * Tính và gán checksum SHA-256 dựa trên nội dung payload hiện tại.
-     * Gọi method này SAU KHI đã set đầy đủ payload, TRƯỚC KHI gửi đi.
-     *
-     * @param gson Instance Gson để serialize payload thành JSON
+     * Tính toán và gán checksum SHA-256 canonical cho toàn bộ gói tin.
      */
+    public void computeAndSetChecksum() {
+        this.checksum = ChecksumUtil.computePacketChecksum(this);
+    }
+
     public void computeAndSetChecksum(Gson gson) {
-        if (this.payload == null) {
-            this.checksum = ChecksumUtil.compute("empty_payload");
-        } else {
-            String payloadJson = gson.toJson(this.payload);
-            this.checksum = ChecksumUtil.compute(payloadJson);
-        }
+        computeAndSetChecksum();
     }
 
     /**
-     * Xác minh tính toàn vẹn của gói tin bằng cách tính lại checksum.
-     *
-     * @param gson Instance Gson để serialize payload thành JSON
-     * @return true nếu checksum hợp lệ, false nếu dữ liệu bị thay đổi
+     * Xác minh tính toàn vẹn của gói tin bằng cách tính lại checksum canonical.
      */
+    public boolean verifyChecksum() {
+        return ChecksumUtil.verifyPacketChecksum(this);
+    }
+
     public boolean verifyChecksum(Gson gson) {
-        if (this.checksum == null || this.payload == null) {
-            return false;
-        }
-        String payloadJson = gson.toJson(this.payload);
-        return ChecksumUtil.verify(payloadJson, this.checksum);
+        return verifyChecksum();
     }
 
     // ===== SERIALIZATION METHODS =====
 
-    /**
-     * Chuyển toàn bộ MeshPacket thành chuỗi JSON để gửi qua Socket.
-     *
-     * @param gson Instance Gson
-     * @return Chuỗi JSON đại diện cho gói tin
-     */
+    public String toJson() {
+        return toJson(new Gson());
+    }
+
     public String toJson(Gson gson) {
         return gson.toJson(this);
     }
 
-    /**
-     * Tạo MeshPacket từ chuỗi JSON nhận được qua Socket.
-     *
-     * @param json Chuỗi JSON nhận được
-     * @param gson Instance Gson
-     * @return MeshPacket object, hoặc null nếu JSON không hợp lệ
-     */
     public static MeshPacket fromJson(String json, Gson gson) {
         if (json == null || json.trim().isEmpty()) {
             return null;
         }
         try {
-            return gson.fromJson(json, MeshPacket.class);
+            MeshPacket packet = gson.fromJson(json, MeshPacket.class);
+            if (packet != null) {
+                packet.normalize();
+            }
+            return packet;
         } catch (Exception e) {
             System.err.println("[ERROR] MeshPacket.fromJson: không parse được JSON — " + e.getMessage());
             return null;
+        }
+    }
+
+    /**
+     * Chuẩn hóa gói tin sang canonical v1 (chuyển đổi alias cũ nếu có).
+     */
+    public void normalize() {
+        if (TYPE_SOS_DATA.equals(this.packetType)) {
+            this.packetType = TYPE_SOS_BROADCAST;
+        } else if (TYPE_DISPATCH_CMD.equals(this.packetType)) {
+            this.packetType = TYPE_DISPATCH_COMMAND;
+        }
+        if (this.protocolVersion == null || this.protocolVersion.trim().isEmpty()) {
+            this.protocolVersion = PROTOCOL_VERSION_1;
+        }
+        if (this.routeHistory == null) {
+            this.routeHistory = new ArrayList<>();
         }
     }
 
@@ -260,6 +315,9 @@ public class MeshPacket {
 
     public String getPacketId() { return packetId; }
     public void setPacketId(String packetId) { this.packetId = packetId; }
+
+    public String getProtocolVersion() { return protocolVersion; }
+    public void setProtocolVersion(String protocolVersion) { this.protocolVersion = protocolVersion; }
 
     public String getPacketType() { return packetType; }
     public void setPacketType(String packetType) { this.packetType = packetType; }
@@ -293,10 +351,6 @@ public class MeshPacket {
 
     // ===== UTILITY METHODS =====
 
-    /**
-     * Thêm node ID vào lịch sử route khi relay.
-     * @param nodeId ID của node vừa xử lý gói tin
-     */
     public void addToRouteHistory(String nodeId) {
         if (this.routeHistory == null) {
             this.routeHistory = new ArrayList<>();
@@ -304,13 +358,11 @@ public class MeshPacket {
         this.routeHistory.add(nodeId);
     }
 
-    /**
-     * Tóm tắt ngắn gọn cho log — không in toàn bộ payload.
-     */
     @Override
     public String toString() {
         return "MeshPacket{"
-                + "id='" + (packetId != null ? packetId.substring(0, 8) : "null") + "...'"
+                + "id='" + (packetId != null && packetId.length() > 8 ? packetId.substring(0, 8) + "..." : packetId) + '\''
+                + ", v='" + protocolVersion + '\''
                 + ", type='" + packetType + '\''
                 + ", from='" + sourceNodeId + '\''
                 + ", to='" + destinationNodeId + '\''
