@@ -3,6 +3,9 @@ package com.rescue.mesh.util;
 import com.google.gson.Gson;
 import com.rescue.mesh.model.MeshPacket;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Factory tạo các loại MeshPacket chuẩn cho hệ thống.
  *
@@ -86,12 +89,33 @@ public class PacketFactory {
             String destinationNodeId,
             String commandMessage,
             String severity) {
+        return createDispatchCommand(destinationNodeId, commandMessage, severity, null);
+    }
+
+    /**
+     * Tạo gói tin lệnh điều phối từ Base Station với lộ trình nguồn chỉ định (Strict Source Routing).
+     *
+     * @param destinationNodeId ID node nạn nhân cần nhận lệnh (ví dụ: "NODE_A_VICTIM")
+     * @param commandMessage    Nội dung lệnh chỉ đạo từ chỉ huy
+     * @param severity          Mức độ ưu tiên của lệnh
+     * @param designatedRoute   Danh sách các node chặng đã chỉ định từ nguồn: ["BASE_STATION", "NODE_B1_RELAY", ...]
+     * @return MeshPacket hoàn chỉnh loại DISPATCH_CMD có kèm Source Route
+     */
+    public static MeshPacket createDispatchCommand(
+            String destinationNodeId,
+            String commandMessage,
+            String severity,
+            List<String> designatedRoute) {
 
         MeshPacket packet = new MeshPacket(
                 MeshPacket.TYPE_DISPATCH_CMD,
                 MeshPacket.NODE_BASE_STATION,
                 destinationNodeId
         );
+
+        if (designatedRoute != null) {
+            packet.setDesignatedRoute(new ArrayList<>(designatedRoute));
+        }
 
         MeshPacket.Payload payload = new MeshPacket.Payload();
         payload.setSenderName("BASE_STATION_COMMANDER");
@@ -137,6 +161,48 @@ public class PacketFactory {
         payload.setSeverity(MeshPacket.SEVERITY_MEDIUM);
         payload.setVictimCount(0);
         payload.setLocation(new MeshPacket.Location(0, 0));
+
+        packet.setPayload(payload);
+        packet.computeAndSetChecksum(GSON);
+
+        return packet;
+    }
+
+    // =========================================================
+    // LOAD_REPORT — Relay node báo cáo tải lên Base Station
+    // =========================================================
+
+    /**
+     * Tạo gói tin LOAD_REPORT từ relay node gửi lên Base Station.
+     * Dùng cho thuật toán Load Balancing — Base Station thu thập tải
+     * từ tất cả relay và chọn relay ít tải nhất để forward SOS.
+     *
+     * @param sourceNodeId   ID của relay node (vd: "NODE_B1_RELAY")
+     * @param currentLoad    Số gói tin đang xử lý tại thời điểm báo cáo
+     * @param processedTotal Tổng gói đã xử lý xong kể từ khi khởi động
+     * @param listenPort     Port lắng nghe của relay (để Base Station gửi ngược)
+     * @return MeshPacket hoàn chỉnh loại LOAD_REPORT
+     */
+    public static MeshPacket createLoadReport(String sourceNodeId,
+                                              int currentLoad,
+                                              int processedTotal,
+                                              int listenPort) {
+        MeshPacket packet = new MeshPacket(
+                MeshPacket.TYPE_LOAD_REPORT,
+                sourceNodeId,
+                MeshPacket.NODE_BASE_STATION
+        );
+
+        MeshPacket.Payload payload = new MeshPacket.Payload();
+        payload.setSenderName(sourceNodeId);
+        payload.setAlertType("LOAD_REPORT");
+        payload.setMessage("Load report from " + sourceNodeId);
+        payload.setSeverity(MeshPacket.SEVERITY_MEDIUM);
+        payload.setVictimCount(0);
+        payload.setLocation(new MeshPacket.Location(0, 0));
+        payload.setCurrentLoad(currentLoad);
+        payload.setProcessedTotal(processedTotal);
+        payload.setListenPort(listenPort);
 
         packet.setPayload(payload);
         packet.computeAndSetChecksum(GSON);

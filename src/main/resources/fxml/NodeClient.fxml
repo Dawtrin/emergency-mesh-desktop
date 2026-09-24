@@ -8,25 +8,33 @@
 
 <!--
     NodeClient.fxml — Giao diện Node Giả Lập (Victim / Relay)
-    Design: iOS 27 Inspired — Clean cards, rounded corners, dark palette
+    Design: Cyber Tactical C2 — Deep Navy Slate, Neon accents, Glass borders
     Controller: com.rescue.mesh.ui.controller.NodeClientController
 
     Layout: VBox vertical
       ├── Header (node ID + status indicator)
-      ├── SOS Form Card (ẩn nếu RELAY mode)
+      ├── Relay Monitor Dashboard (hiện nếu RELAY mode) — Phase 2
+      │   ├── Upstream Status Card
+      │   ├── Relayed Packets Card
+      │   ├── Load Level Card
+      │   └── Heartbeat Card
+      ├── SOS Form Card (hiện nếu VICTIM mode)
       │   ├── Sender name, Alert type, Severity
-      │   ├── Victim count, Latitude, Longitude
+      │   ├── Victim count, Latitude, Longitude (2 dòng riêng biệt)
       │   ├── Message textarea
       │   └── SOS Button + Quick SOS + Heartbeat
+      ├── Dispatch Received Card (hiện khi nhận lệnh)
       └── Log Card (TextArea monospace)
+
+    v2.0: Cyber Tactical C2 redesign — Navy Slate palette, neon SOS button, glass borders.
 -->
 
 <VBox xmlns="http://javafx.com/javafx/21"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.rescue.mesh.ui.controller.NodeClientController"
       spacing="0"
-      style="-fx-background-color: #000000;"
-      prefWidth="420" prefHeight="700">
+      style="-fx-background-color: #0B0F19;"
+      prefWidth="450" prefHeight="720">
 
     <!-- ══════ HEADER BAR ══════ -->
     <HBox styleClass="header-bar" alignment="CENTER_LEFT" spacing="12">
@@ -49,9 +57,54 @@
 
     <!-- ══════ SCROLLABLE CONTENT ══════ -->
     <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
-                style="-fx-background-color: #000000; -fx-background: #000000;">
-        <VBox spacing="16" style="-fx-background-color: #000000;">
+                style="-fx-background-color: #0B0F19; -fx-background: #0B0F19;">
+        <VBox spacing="16" style="-fx-background-color: #0B0F19;">
             <padding><Insets top="16" right="16" bottom="16" left="16"/></padding>
+
+            <!-- ══════ RELAY MONITOR DASHBOARD (Phase 2) ══════ -->
+            <!-- Hiện khi chế độ RELAY, chứa thống kê real-time -->
+            <VBox fx:id="relayDashboardContainer" spacing="12" visible="false" managed="false">
+
+                <Label text="📡 RELAY MONITOR DASHBOARD" styleClass="section-header"
+                       style="-fx-text-fill: #10B981;"/>
+
+                <!-- Row 1: Upstream Status + Relayed Packets -->
+                <HBox spacing="12">
+                    <VBox spacing="4" styleClass="relay-stat-card" HBox.hgrow="ALWAYS" alignment="CENTER">
+                        <Label text="🔗 UPSTREAM" styleClass="stat-label" style="-fx-text-fill: #94A3B8;"/>
+                        <Label fx:id="lblRelayUpstreamStatus" text="Connecting..."
+                               styleClass="stat-number" style="-fx-text-fill: #10B981; -fx-font-size: 18;"/>
+                        <Label fx:id="lblRelayUpstreamDetail" text=""
+                               styleClass="subtitle-label" style="-fx-font-size: 10;"/>
+                    </VBox>
+
+                    <VBox spacing="4" styleClass="relay-stat-card" HBox.hgrow="ALWAYS" alignment="CENTER">
+                        <Label text="📦 ĐÃ CHUYỂN TIẾP" styleClass="stat-label" style="-fx-text-fill: #94A3B8;"/>
+                        <Label fx:id="lblRelayPacketsRelayed" text="0"
+                               styleClass="stat-number" style="-fx-text-fill: #0EA5E9; -fx-font-size: 24;"/>
+                        <Label text="gói tin" styleClass="subtitle-label" style="-fx-font-size: 10;"/>
+                    </VBox>
+                </HBox>
+
+                <!-- Row 2: Current Load + Heartbeat -->
+                <HBox spacing="12">
+                    <VBox spacing="4" styleClass="relay-stat-card" HBox.hgrow="ALWAYS" alignment="CENTER">
+                        <Label text="⚡ TẢI HIỆN TẠI" styleClass="stat-label" style="-fx-text-fill: #94A3B8;"/>
+                        <Label fx:id="lblRelayCurrentLoad" text="0"
+                               styleClass="stat-number" style="-fx-text-fill: #F59E0B; -fx-font-size: 24;"/>
+                        <ProgressBar fx:id="relayLoadBar" progress="0" prefWidth="140" prefHeight="6"
+                                     style="-fx-accent: #F59E0B;"/>
+                    </VBox>
+
+                    <VBox spacing="4" styleClass="relay-stat-card" HBox.hgrow="ALWAYS" alignment="CENTER">
+                        <Label text="💓 HEARTBEAT" styleClass="stat-label" style="-fx-text-fill: #94A3B8;"/>
+                        <Label fx:id="lblRelayHeartbeat" text="—"
+                               styleClass="stat-number" style="-fx-text-fill: #10B981; -fx-font-size: 18;"/>
+                        <Label fx:id="lblRelayHeartbeatInterval" text="mỗi 3 giây"
+                               styleClass="subtitle-label" style="-fx-font-size: 10;"/>
+                    </VBox>
+                </HBox>
+            </VBox>
 
             <!-- ══════ SOS FORM CARD ══════ -->
             <VBox fx:id="sosFormContainer" spacing="0" styleClass="card">
@@ -84,24 +137,24 @@
                         </VBox>
                     </HBox>
 
-                    <!-- Victim Count + Lat + Lon (3 columns) -->
-                    <HBox spacing="12">
-                        <VBox spacing="4" HBox.hgrow="ALWAYS">
-                            <Label text="Số nạn nhân" styleClass="subtitle-label"/>
-                            <TextField fx:id="txtVictimCount" promptText="1"
-                                       styleClass="text-field"/>
-                        </VBox>
-                        <VBox spacing="4" HBox.hgrow="ALWAYS">
-                            <Label text="Vĩ độ" styleClass="subtitle-label"/>
-                            <TextField fx:id="txtLatitude" promptText="15.9738"
-                                       styleClass="text-field"/>
-                        </VBox>
-                        <VBox spacing="4" HBox.hgrow="ALWAYS">
-                            <Label text="Kinh độ" styleClass="subtitle-label"/>
-                            <TextField fx:id="txtLongitude" promptText="108.2515"
-                                       styleClass="text-field"/>
-                        </VBox>
-                    </HBox>
+                    <!-- Victim Count (full width) -->
+                    <VBox spacing="4">
+                        <Label text="Số nạn nhân" styleClass="subtitle-label"/>
+                        <TextField fx:id="txtVictimCount" promptText="1"
+                                   styleClass="text-field"/>
+                    </VBox>
+
+                    <!-- Phase 2: Latitude + Longitude trên 2 dòng riêng biệt -->
+                    <VBox spacing="4">
+                        <Label text="Vĩ độ (Latitude)" styleClass="subtitle-label"/>
+                        <TextField fx:id="txtLatitude" promptText="15.9738"
+                                   styleClass="text-field"/>
+                    </VBox>
+                    <VBox spacing="4">
+                        <Label text="Kinh độ (Longitude)" styleClass="subtitle-label"/>
+                        <TextField fx:id="txtLongitude" promptText="108.2515"
+                                   styleClass="text-field"/>
+                    </VBox>
 
                     <!-- Message -->
                     <VBox spacing="4">
@@ -132,11 +185,14 @@
             </VBox>
 
             <!-- ══════ DISPATCH RECEIVED CARD (hiện khi nhận lệnh) ══════ -->
-            <VBox fx:id="dispatchCard" spacing="8" styleClass="card" visible="false" managed="false">
+            <VBox fx:id="dispatchCard" spacing="8" styleClass="dispatch-received-card" visible="false" managed="false">
                 <Label text="📋 LỆNH CHỈ ĐẠO TỪ TRẠM CHỈ HUY" styleClass="section-header"
-                       style="-fx-text-fill: #0A84FF;"/>
+                       style="-fx-text-fill: #0EA5E9;"/>
                 <Label fx:id="lblDispatchContent" wrapText="true"
-                       style="-fx-text-fill: #FFFFFF; -fx-font-size: 15;"/>
+                       style="-fx-text-fill: #F1F5F9; -fx-font-size: 15;"/>
+                <Button fx:id="btnAckDispatch" text="✅ Đã Hiểu Lệnh"
+                        maxWidth="Infinity" styleClass="dispatch-button"
+                        onAction="#onAcknowledgeDispatch"/>
             </VBox>
 
             <!-- ══════ LOG CARD ══════ -->

@@ -5,91 +5,138 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Emergency Mesh Rescue — Tactical Map</title>
 
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!--
+        Phase 3: Offline Map Resilience
+        - Leaflet CSS/JS loaded from local vendor/ directory first (offline-capable)
+        - CDN fallback if local files not found
+        - Tactical Canvas Grid when completely offline (no tiles available)
+    -->
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet CSS — Local first, CDN fallback -->
+    <link rel="stylesheet" href="vendor/leaflet.css"
+          onerror="this.onerror=null; this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
+
+    <!-- Leaflet JS — Local first, CDN fallback -->
+    <script>
+        // Phase 3: Try local vendor/ bundle first, fallback to CDN
+        function loadLeaflet(callback) {
+            var script = document.createElement('script');
+            script.src = 'vendor/leaflet.js';
+            script.onload = function() {
+                console.log('[MAP] Leaflet loaded from LOCAL vendor/');
+                callback();
+            };
+            script.onerror = function() {
+                console.log('[MAP] Local leaflet.js not found, trying CDN...');
+                var cdnScript = document.createElement('script');
+                cdnScript.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                cdnScript.onload = function() {
+                    console.log('[MAP] Leaflet loaded from CDN');
+                    callback();
+                };
+                cdnScript.onerror = function() {
+                    console.log('[MAP] WARNING: No Leaflet source available — activating Tactical Grid Fallback');
+                    activateTacticalGridFallback();
+                };
+                document.head.appendChild(cdnScript);
+            };
+            document.head.appendChild(script);
+        }
+    </script>
 
     <style>
-        /* ── Dark Tactical Map Styling ── */
+        /* ── Cyber Tactical C2 Map Styling v2.0 ── */
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            background: #121214;
+            background: #0B0F19;
             overflow: hidden;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: "Segoe UI", "Inter", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
         }
 
         #map {
             width: 100%;
             height: 100vh;
-            background: #121214;
+            background: #0B0F19;
         }
 
-        /* ── CSS Dark Mode Filter cho mọi Tile Layer (Đảm bảo luôn tối và không bị ô trắng) ── */
+        /* ── Phase 3: Tactical Grid Canvas Fallback ── */
+        #tactical-grid-canvas {
+            display: none;
+            width: 100%;
+            height: 100vh;
+            background: #070A12;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 9999;
+        }
+
+        /* ── CSS Dark Mode Filter cho mọi Tile Layer ── */
         .dark-tiles .leaflet-tile {
             filter: brightness(0.65) invert(1) contrast(3.5) hue-rotate(200deg) saturate(0.25) brightness(0.65);
         }
 
         /* Tactical Grid nền khi tile đang tải */
         .leaflet-container {
-            background-color: #121214 !important;
-            background-image: 
-                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px) !important;
-            background-size: 20px 20px !important;
+            background-color: #0B0F19 !important;
+            background-image:
+                linear-gradient(rgba(14, 165, 233, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(14, 165, 233, 0.04) 1px, transparent 1px) !important;
+            background-size: 24px 24px !important;
         }
 
-        /* Override Leaflet controls for dark theme */
+        /* Override Leaflet controls for Cyber Navy theme */
         .leaflet-control-zoom a {
-            background-color: rgba(28, 28, 30, 0.95) !important;
-            color: #0A84FF !important;
-            border: 1px solid rgba(255,255,255,0.12) !important;
+            background-color: rgba(17, 24, 39, 0.95) !important;
+            color: #0EA5E9 !important;
+            border: 1px solid rgba(255,255,255,0.10) !important;
             border-radius: 8px !important;
             font-weight: bold !important;
+            transition: all 0.2s ease;
         }
         .leaflet-control-zoom a:hover {
-            background-color: rgba(44, 44, 46, 1.0) !important;
-            color: #FFFFFF !important;
+            background-color: rgba(30, 41, 59, 1.0) !important;
+            color: #38BDF8 !important;
+            box-shadow: 0 0 8px rgba(14, 165, 233, 0.3);
         }
         .leaflet-control-zoom {
             border: none !important;
             border-radius: 10px !important;
             overflow: hidden;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.5) !important;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.6) !important;
         }
 
         .leaflet-control-attribution {
-            background: rgba(18, 18, 20, 0.85) !important;
-            color: #8E8E93 !important;
+            background: rgba(11, 15, 25, 0.88) !important;
+            color: #64748B !important;
             font-size: 10px !important;
             border-top-left-radius: 6px;
             padding: 2px 6px !important;
         }
         .leaflet-control-attribution a {
-            color: #0A84FF !important;
+            color: #0EA5E9 !important;
             text-decoration: none;
         }
 
-        /* Custom popup styling — iOS 27 Glassmorphism */
+        /* Custom popup styling — Tactical Dark Glass */
         .leaflet-popup-content-wrapper {
-            background: rgba(28, 28, 30, 0.96) !important;
-            color: #FFFFFF !important;
-            border-radius: 16px !important;
-            box-shadow: 0 12px 36px rgba(0,0,0,0.7) !important;
-            border: 1px solid rgba(255,255,255,0.12);
-            backdrop-filter: blur(20px);
+            background: rgba(17, 24, 39, 0.96) !important;
+            color: #F1F5F9 !important;
+            border-radius: 14px !important;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.75) !important;
+            border: 1px solid rgba(14, 165, 233, 0.18);
+            backdrop-filter: blur(24px);
         }
         .leaflet-popup-tip {
-            background: rgba(28, 28, 30, 0.96) !important;
+            background: rgba(17, 24, 39, 0.96) !important;
         }
         .leaflet-popup-close-button {
-            color: #8E8E93 !important;
+            color: #64748B !important;
             padding: 8px 8px 0 0 !important;
         }
         .leaflet-popup-content {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: "Segoe UI", "Inter", -apple-system, Roboto, sans-serif;
             font-size: 13px;
             line-height: 1.5;
             margin: 12px 14px !important;
@@ -97,7 +144,7 @@
 
         /* SOS Popup inner styling */
         .sos-popup {
-            min-width: 200px;
+            min-width: 210px;
         }
         .sos-popup h3 {
             margin: 0 0 8px 0;
@@ -107,34 +154,61 @@
             align-items: center;
             gap: 6px;
         }
-        .sos-popup .critical { color: #FF453A; }
-        .sos-popup .high { color: #FF9F0A; }
-        .sos-popup .medium { color: #FFD60A; }
+        .sos-popup .critical { color: #FF2A54; }
+        .sos-popup .high { color: #F59E0B; }
+        .sos-popup .medium { color: #FACC15; }
         .sos-popup .info-row {
             display: flex;
             justify-content: space-between;
-            padding: 4px 0;
+            padding: 5px 0;
             border-bottom: 1px solid rgba(255,255,255,0.06);
         }
         .sos-popup .info-label {
-            color: #8E8E93;
+            color: #94A3B8;
             font-size: 12px;
         }
         .sos-popup .info-value {
             font-weight: 600;
             font-size: 13px;
-            color: #FFFFFF;
+            color: #F1F5F9;
         }
 
-        /* Pulse animation for CRITICAL markers */
-        @keyframes pulse-sos {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.8); }
-            70% { transform: scale(1.08); box-shadow: 0 0 0 16px rgba(255, 59, 48, 0); }
-            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
+        /* ── Radar Pulse Ring animation for SOS CRITICAL markers ── */
+        @keyframes radar-pulse {
+            0%   { transform: scale(1);   box-shadow: 0 0 0 0 rgba(255, 42, 84, 0.7); }
+            50%  { transform: scale(1.06); box-shadow: 0 0 0 12px rgba(255, 42, 84, 0); }
+            100% { transform: scale(1);   box-shadow: 0 0 0 0 rgba(255, 42, 84, 0); }
+        }
+        @keyframes radar-ring {
+            0%   { opacity: 0.8; transform: scale(0.5); }
+            100% { opacity: 0;   transform: scale(2.8); }
         }
 
         .pulse-marker-sos {
-            animation: pulse-sos 1.4s ease-out infinite;
+            animation: radar-pulse 1.6s ease-out infinite;
+            border-radius: 50%;
+            position: relative;
+        }
+        .pulse-marker-sos::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 100%; height: 100%;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 42, 84, 0.5);
+            transform: translate(-50%, -50%) scale(1);
+            animation: radar-ring 2s ease-out infinite;
+            pointer-events: none;
+        }
+
+        /* ── Radar Pulse for Base Station marker ── */
+        @keyframes radar-base {
+            0%   { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.6); }
+            70%  { box-shadow: 0 0 0 18px rgba(14, 165, 233, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0); }
+        }
+        .pulse-marker-base {
+            animation: radar-base 2.5s ease-out infinite;
             border-radius: 50%;
         }
     </style>
@@ -143,53 +217,217 @@
 
 <div id="map"></div>
 
+<!-- Phase 3: Tactical Grid Canvas — hiện khi không có Leaflet/Internet -->
+<canvas id="tactical-grid-canvas"></canvas>
+
 <script>
     // ═══════════════════════════════════════════════════════════
-    //  BẢN ĐỒ TÁC CHIẾN TỰ ĐỘNG DỰ PHÒNG TILE LAYER (FALLBACK)
+    //  PHASE 3: TACTICAL GRID FALLBACK — Khi hoàn toàn mất Internet
     // ═══════════════════════════════════════════════════════════
 
-    // ── Khởi tạo bản đồ trung tâm: Trường ĐH CNTT&TT Việt - Hàn (VKU) — 15.9753, 108.2532 ──
-    var map = L.map('map', {
-        center: [15.9753, 108.2532],
-        zoom: 15,
-        zoomControl: true,
-        attributionControl: true,
-        preferCanvas: true // Tối ưu hiệu năng WebView JavaFX
-    });
+    // Lưu trữ markers cho cả 2 chế độ (Leaflet và Canvas)
+    var _tacticalMarkers = [];
+    var _canvasMode = false;
 
-    // ── Tile Provider 1: CartoDB Dark Matter ──
-    var cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OSM &copy; CARTO',
-        subdomains: 'abcd',
-        maxZoom: 19,
-        minZoom: 4
-    });
+    /**
+     * Phase 3: Kích hoạt Lưới Tọa Độ Quân Sự khi không có Leaflet.
+     * Vẽ lưới tọa độ GPS trên HTML5 Canvas với khả năng vẽ marker SOS.
+     */
+    function activateTacticalGridFallback() {
+        _canvasMode = true;
+        document.getElementById('map').style.display = 'none';
+        var canvas = document.getElementById('tactical-grid-canvas');
+        canvas.style.display = 'block';
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
 
-    // ── Tile Provider 2 (Fallback): OpenStreetMap với CSS Dark Filter ──
-    var osmDark = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
-        className: 'dark-tiles',
-        maxZoom: 19,
-        minZoom: 4
-    });
+        drawTacticalGrid(canvas);
+        drawCanvasMarkers(canvas);
 
-    // Thêm CartoDark làm lớp chính, nếu lỗi tile tự động nạp OSM
-    cartoDark.addTo(map);
+        // Responsive
+        window.addEventListener('resize', function() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            drawTacticalGrid(canvas);
+            drawCanvasMarkers(canvas);
+        });
 
-    // Xử lý lỗi tile đơn lẻ
-    cartoDark.on('tileerror', function(error, tile) {
-        // Tự động chuyển lớp sang OSM nếu CartoDB gặp sự cố mạng
-        if (!map.hasLayer(osmDark)) {
-            map.removeLayer(cartoDark);
-            osmDark.addTo(map);
-            console.log('[MAP] Switching to backup dark tile provider (OSM)');
+        console.log('[MAP] Tactical Grid Fallback ACTIVATED — GPS coordinate grid ready');
+    }
+
+    /**
+     * Vẽ lưới tọa độ quân sự trên Canvas.
+     */
+    function drawTacticalGrid(canvas) {
+        var ctx = canvas.getContext('2d');
+        var w = canvas.width, h = canvas.height;
+
+        // Clear
+        ctx.fillStyle = '#070A12';
+        ctx.fillRect(0, 0, w, h);
+
+        // Grid lines — lưới nhỏ
+        ctx.strokeStyle = 'rgba(14, 165, 233, 0.06)';
+        ctx.lineWidth = 0.5;
+        var gridSize = 40;
+        for (var x = 0; x < w; x += gridSize) {
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
         }
+        for (var y = 0; y < h; y += gridSize) {
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+        }
+
+        // Grid lines — lưới lớn (mỗi 5 ô)
+        ctx.strokeStyle = 'rgba(14, 165, 233, 0.15)';
+        ctx.lineWidth = 1;
+        for (var x = 0; x < w; x += gridSize * 5) {
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+        }
+        for (var y = 0; y < h; y += gridSize * 5) {
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+        }
+
+        // Trục tọa độ trung tâm
+        ctx.strokeStyle = 'rgba(0, 245, 212, 0.35)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(w/2, 0); ctx.lineTo(w/2, h); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, h/2); ctx.lineTo(w, h/2); ctx.stroke();
+
+        // Nhãn tiêu đề
+        ctx.fillStyle = '#00F5D4';
+        ctx.font = 'bold 14px Consolas, monospace';
+        ctx.fillText('TACTICAL GRID — OFFLINE MODE', 20, 30);
+        ctx.fillStyle = '#94A3B8';
+        ctx.font = '11px Consolas, monospace';
+        ctx.fillText('Center: 15.9753°N, 108.2532°E (VKU Đà Nẵng)', 20, 48);
+        ctx.fillText('Grid: GPS Coordinates | No Internet Connection', 20, 64);
+
+        // Nhãn tọa độ GPS trên trục
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.5)';
+        ctx.font = '10px Consolas, monospace';
+        var centerLat = 15.9753, centerLon = 108.2532;
+        var degPerPixel = 0.0001; // ~11m per pixel at zoom 15
+
+        for (var x = 0; x < w; x += gridSize * 5) {
+            var lon = centerLon + (x - w/2) * degPerPixel;
+            ctx.fillText(lon.toFixed(3) + '°E', x + 2, h/2 - 5);
+        }
+        for (var y = 0; y < h; y += gridSize * 5) {
+            var lat = centerLat - (y - h/2) * degPerPixel;
+            ctx.fillText(lat.toFixed(3) + '°N', w/2 + 5, y - 3);
+        }
+
+        // Vẽ Base Station marker ở trung tâm
+        ctx.fillStyle = '#0EA5E9';
+        ctx.beginPath();
+        ctx.arc(w/2, h/2, 14, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#00F5D4';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '16px sans-serif';
+        ctx.fillText('🏛️', w/2 - 10, h/2 + 6);
+
+        ctx.fillStyle = '#00F5D4';
+        ctx.font = 'bold 11px Consolas, monospace';
+        ctx.fillText('BASE STATION', w/2 - 42, h/2 + 28);
+    }
+
+    /**
+     * Vẽ tất cả markers SOS trên Canvas fallback.
+     */
+    function drawCanvasMarkers(canvas) {
+        var ctx = canvas.getContext('2d');
+        var w = canvas.width, h = canvas.height;
+        var centerLat = 15.9753, centerLon = 108.2532;
+        var degPerPixel = 0.0001;
+
+        _tacticalMarkers.forEach(function(m) {
+            var px = w/2 + (m.lon - centerLon) / degPerPixel;
+            var py = h/2 - (m.lat - centerLat) / degPerPixel;
+
+            // Circle marker
+            ctx.fillStyle = m.color;
+            ctx.beginPath();
+            ctx.arc(px, py, 12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Glow effect
+            ctx.shadowColor = m.color;
+            ctx.shadowBlur = 15;
+            ctx.beginPath();
+            ctx.arc(px, py, 12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Label
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '10px Consolas, monospace';
+            ctx.fillText(m.nodeId, px - 30, py + 24);
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  KHỞI TẠO BẢN ĐỒ
+    // ═══════════════════════════════════════════════════════════
+
+    loadLeaflet(function() {
+        initializeLeafletMap();
     });
 
-    // ── Quản lý Markers & Routes ──
-    var markerGroup = L.layerGroup().addTo(map);
-    var markers = [];
-    var routeLines = [];
+    var map, markerGroup, markers = [], routeLines = [];
+
+    function initializeLeafletMap() {
+        // ── Khởi tạo bản đồ trung tâm: Trường ĐH CNTT&TT Việt - Hàn (VKU) — 15.9753, 108.2532 ──
+        map = L.map('map', {
+            center: [15.9753, 108.2532],
+            zoom: 15,
+            zoomControl: true,
+            attributionControl: true,
+            preferCanvas: true // Tối ưu hiệu năng WebView JavaFX
+        });
+
+        // ── Tile Provider 1: CartoDB Dark Matter ──
+        var cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OSM &copy; CARTO',
+            subdomains: 'abcd',
+            maxZoom: 19,
+            minZoom: 4
+        });
+
+        // ── Tile Provider 2 (Fallback): OpenStreetMap với CSS Dark Filter ──
+        var osmDark = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            className: 'dark-tiles',
+            maxZoom: 19,
+            minZoom: 4
+        });
+
+        // Thêm CartoDark làm lớp chính, nếu lỗi tile tự động nạp OSM
+        cartoDark.addTo(map);
+
+        // Xử lý lỗi tile đơn lẻ
+        cartoDark.on('tileerror', function(error, tile) {
+            // Tự động chuyển lớp sang OSM nếu CartoDB gặp sự cố mạng
+            if (!map.hasLayer(osmDark)) {
+                map.removeLayer(cartoDark);
+                osmDark.addTo(map);
+                console.log('[MAP] Switching to backup dark tile provider (OSM)');
+            }
+        });
+
+        // ── Quản lý Markers & Routes ──
+        markerGroup = L.layerGroup().addTo(map);
+
+        // Khởi tạo Marker Base Station tại Trung tâm Chỉ huy VKU (15.9753, 108.2532)
+        addBaseStationMarker(15.9753, 108.2532);
+
+        console.log('[MAP] Tactical Leaflet Map initialized — Center: VKU Danang (15.9753, 108.2532)');
+    }
 
     // ═══════════════════════════════════════════════════════════
     //  JS BRIDGE FUNCTIONS (Gọi từ Java Controller)
@@ -199,15 +437,30 @@
      * Thêm Marker SOS lên bản đồ khi Base Station nhận tín hiệu.
      */
     function addSOSMarker(lat, lon, nodeId, severity, alertType, message, victimCount) {
+        // Lưu marker data cho cả Canvas fallback
         var color, className, badgeClass;
         switch (severity) {
             case 'CRITICAL':
-                color = '#FF3B30'; className = 'critical'; badgeClass = 'pulse-marker-sos'; break;
+                color = '#FF2A54'; className = 'critical'; badgeClass = 'pulse-marker-sos'; break;
             case 'HIGH':
-                color = '#FF9F0A'; className = 'high'; badgeClass = ''; break;
+                color = '#F59E0B'; className = 'high'; badgeClass = ''; break;
             default:
-                color = '#FFD60A'; className = 'medium'; badgeClass = ''; break;
+                color = '#FACC15'; className = 'medium'; badgeClass = ''; break;
         }
+
+        // Lưu vào mảng cho cả 2 chế độ
+        _tacticalMarkers.push({ lat: lat, lon: lon, nodeId: nodeId, color: color, severity: severity });
+
+        // Nếu đang ở Canvas fallback mode
+        if (_canvasMode) {
+            var canvas = document.getElementById('tactical-grid-canvas');
+            drawTacticalGrid(canvas);
+            drawCanvasMarkers(canvas);
+            return _tacticalMarkers.length;
+        }
+
+        // Leaflet mode
+        if (typeof L === 'undefined' || !map) return 0;
 
         var icon = '🆘';
         var typeText = 'Cứu hộ khẩn cấp';
@@ -245,8 +498,8 @@
             + '<span class="info-value" style="color:' + color + ';">' + victimCount + ' người</span></div>'
             + '<div class="info-row"><span class="info-label">Tọa Độ GPS</span>'
             + '<span class="info-value">' + lat.toFixed(4) + ', ' + lon.toFixed(4) + '</span></div>'
-            + '<div style="margin-top:8px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.08); color:#E5E5EA; font-size:12.5px; font-style:italic;">'
-            + '“' + (message || 'Cần hỗ trợ khẩn cấp!') + '”'
+            + '<div style="margin-top:8px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.08); color:#CBD5E1; font-size:12.5px; font-style:italic;">'
+            + '"' + (message || 'Cần hỗ trợ khẩn cấp!') + '"'
             + '</div>'
             + '</div>';
 
@@ -254,6 +507,8 @@
             .bindPopup(popupContent, { maxWidth: 300 })
             .addTo(markerGroup);
 
+        // Lưu nodeId vào marker để focusVictim() tìm được
+        marker._nodeId = nodeId;
         markers.push(marker);
 
         // Zoom mượt mà đến vị trí nạn nhân
@@ -271,37 +526,89 @@
     }
 
     /**
+     * Phase 1.2: Focus Victim — Lướt bản đồ đến vị trí nạn nhân và mở popup.
+     * Được gọi từ Java khi click chọn dòng trong TableView.
+     *
+     * @param nodeId ID node nguồn (vd: "NODE_A_VICTIM")
+     * @param lat    Vĩ độ GPS
+     * @param lon    Kinh độ GPS
+     */
+    function focusVictim(nodeId, lat, lon) {
+        if (_canvasMode) {
+            // Canvas mode — highlight marker
+            var canvas = document.getElementById('tactical-grid-canvas');
+            drawTacticalGrid(canvas);
+            drawCanvasMarkers(canvas);
+
+            // Vẽ vòng highlight
+            var ctx = canvas.getContext('2d');
+            var w = canvas.width, h = canvas.height;
+            var centerLat = 15.9753, centerLon = 108.2532;
+            var degPerPixel = 0.0001;
+            var px = w/2 + (lon - centerLon) / degPerPixel;
+            var py = h/2 - (lat - centerLat) / degPerPixel;
+
+            ctx.strokeStyle = '#00F5D4';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(px, py, 22, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.fillStyle = '#00F5D4';
+            ctx.font = 'bold 12px Consolas, monospace';
+            ctx.fillText('▶ ' + nodeId, px - 40, py + 38);
+            return;
+        }
+
+        if (typeof L === 'undefined' || !map) return;
+
+        // Lướt mượt đến vị trí
+        map.flyTo([lat, lon], Math.max(map.getZoom(), 15), {
+            animate: true,
+            duration: 0.8
+        });
+
+        // Tìm marker matching nodeId và mở popup
+        setTimeout(function() {
+            for (var i = 0; i < markers.length; i++) {
+                if (markers[i]._nodeId === nodeId) {
+                    markers[i].openPopup();
+                    break;
+                }
+            }
+        }, 900);
+    }
+
+    /**
      * Thêm Marker Base Station cố định
      */
     function addBaseStationMarker(lat, lon) {
+        if (typeof L === 'undefined' || !map) return;
+
         var bsIcon = L.divIcon({
             className: 'base-station-marker',
-            html: '<div style="'
-                + 'background: #0A84FF;'
-                + 'width: 42px; height: 42px;'
+            html: '<div class="pulse-marker-base" style="'
+                + 'background: linear-gradient(135deg, #0EA5E9, #0369A1);'
+                + 'width: 44px; height: 44px;'
                 + 'border-radius: 50%;'
                 + 'display: flex; align-items: center; justify-content: center;'
                 + 'font-size: 22px;'
-                + 'border: 3px solid #FFFFFF;'
-                + 'box-shadow: 0 0 25px rgba(10,132,255,0.8);'
+                + 'border: 3px solid #00F5D4;'
+                + 'box-shadow: 0 0 30px rgba(14,165,233,0.6), 0 0 60px rgba(0,245,212,0.15);'
                 + '">🏛️</div>',
-            iconSize: [42, 42],
-            iconAnchor: [21, 21],
-            popupAnchor: [0, -24]
+            iconSize: [44, 44],
+            iconAnchor: [22, 22],
+            popupAnchor: [0, -26]
         });
 
         L.marker([lat, lon], { icon: bsIcon })
-            .bindPopup('<div class="sos-popup"><h3 style="color:#0A84FF">🏛️ TRẠM CHỈ HUY TRUNG TÂM</h3>'
-                + '<div class="info-row"><span class="info-label">Trạng Thái</span><span class="info-value" style="color:#30D158">Sẵn sàng (Port 8888)</span></div>'
+            .bindPopup('<div class="sos-popup"><h3 style="color:#0EA5E9">🏛️ TRẠM CHỈ HUY TRUNG TÂM</h3>'
+                + '<div class="info-row"><span class="info-label">Trạng Thái</span><span class="info-value" style="color:#10B981">Sẵn sàng (Port 8888)</span></div>'
                 + '<div class="info-row"><span class="info-label">Tọa Độ</span><span class="info-value">' + lat.toFixed(4) + ', ' + lon.toFixed(4) + '</span></div>'
                 + '</div>')
             .addTo(markerGroup);
     }
 
-    // Khởi tạo Marker Base Station tại Trung tâm Chỉ huy VKU (15.9753, 108.2532)
-    addBaseStationMarker(15.9753, 108.2532);
-
-    console.log('[MAP] Tactical Leaflet Map initialized — Center: VKU Danang (15.9753, 108.2532)');
 </script>
 
 </body>

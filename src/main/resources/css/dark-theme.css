@@ -1,32 +1,32 @@
 /*
  * ══════════════════════════════════════════════════════════════
- *  EMERGENCY MESH RESCUE — iOS 27 Inspired Dark Theme
+ *  EMERGENCY MESH RESCUE — Cyber Tactical C2 Dark Theme v2.0
  * ══════════════════════════════════════════════════════════════
  *
- *  Design Language: Apple iOS 27 / Human Interface Guidelines
- *    - Pure black backgrounds (#000000)
- *    - Elevated surfaces (#1C1C1E, #2C2C2E)
- *    - System font stack (Segoe UI on Windows)
- *    - Large corner radius (14-20px)
- *    - Subtle depth via drop shadows
- *    - Vibrancy colors (SF Red, Green, Blue, Orange)
- *    - Clean typography with generous spacing
- *    - Glassmorphism panels with semi-transparent backgrounds
+ *  Design Language: Tactical Command & Control (C2) / Sci-Fi Ops
+ *    - Deep Cyber Navy backgrounds (#0B0F19, #111827)
+ *    - Elevated Slate surfaces (#1E293B, #334155)
+ *    - Subtle glass borders rgba(255,255,255,0.08)
+ *    - Large corner radius (14-16px)
+ *    - Multi-layer drop shadows for depth
+ *    - Neon accent colors (Teal, Cyan, Crimson, Emerald)
+ *    - Clean Inter/Segoe UI typography with generous spacing
  *
- *  Color Palette (iOS System Colors):
- *    Primary Background:  #000000
- *    Elevated Surface:    #1C1C1E
- *    Secondary Surface:   #2C2C2E
- *    Tertiary Surface:    #3A3A3C
- *    Separator:           #48484A
- *    Text Primary:        #FFFFFF
- *    Text Secondary:      #8E8E93
- *    Text Tertiary:       #636366
- *    Accent Red (SOS):    #FF3B30
- *    Accent Green:        #30D158
- *    Accent Orange:       #FF9F0A
- *    Accent Blue:         #0A84FF
- *    Accent Yellow:       #FFD60A
+ *  Color Palette (Cyber Navy Slate):
+ *    Primary Background:  #0B0F19  (Deep Space Navy)
+ *    Elevated Surface:    #111827  (Slate 900)
+ *    Secondary Surface:   #1E293B  (Slate 800)
+ *    Tertiary Surface:    #334155  (Slate 700)
+ *    Separator:           rgba(255,255,255,0.08)
+ *    Text Primary:        #F1F5F9  (Warm white)
+ *    Text Secondary:      #94A3B8  (Slate 400)
+ *    Text Tertiary:       #64748B  (Slate 500)
+ *    Accent Teal (Mesh):  #00F5D4  (Neon Teal)
+ *    Accent Cyan (Info):  #0EA5E9  (Sky 500)
+ *    Accent Red (SOS):    #FF2A54  (Neon Crimson)
+ *    Accent Green:        #10B981  (Emerald 500)
+ *    Accent Orange:       #F59E0B  (Amber 500)
+ *    Accent Yellow:       #FACC15  (Yellow 400)
  */
 
 /* ══════════════════════════════════════════════════════════════
@@ -34,104 +34,113 @@
    ══════════════════════════════════════════════════════════════ */
 
 .root {
-    -fx-base: #000000;
-    -fx-background: #000000;
-    -fx-control-inner-background: #1C1C1E;
-    -fx-accent: #FF3B30;
-    -fx-focus-color: rgba(255, 59, 48, 0.6);
-    -fx-faint-focus-color: rgba(255, 59, 48, 0.2);
-    -fx-font-family: "Segoe UI", "SF Pro Display", "-apple-system", "Helvetica Neue", system;
+    -fx-base: #0B0F19;
+    -fx-background: #0B0F19;
+    -fx-control-inner-background: #111827;
+    -fx-accent: #0EA5E9;
+    -fx-focus-color: rgba(14, 165, 233, 0.5);
+    -fx-faint-focus-color: rgba(14, 165, 233, 0.15);
+    -fx-font-family: "Segoe UI", "Inter", "SF Pro Display", "-apple-system", "Helvetica Neue", system;
     -fx-font-size: 14px;
-    -fx-text-fill: #FFFFFF;
+    -fx-text-fill: #F1F5F9;
 }
 
 /* ══════════════════════════════════════════════════════════════
-   CARDS — iOS-style rounded containers
+   CARDS — Tactical rounded containers with glass borders
    ══════════════════════════════════════════════════════════════ */
 
 .card {
-    -fx-background-color: #1C1C1E;
-    -fx-background-radius: 18;
-    -fx-border-radius: 18;
+    -fx-background-color: #111827;
+    -fx-background-radius: 16;
+    -fx-border-radius: 16;
+    -fx-border-color: rgba(255, 255, 255, 0.06);
+    -fx-border-width: 1;
     -fx-padding: 18;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 12, 0, 0, 4);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 14, 0, 0, 4);
 }
 
 .card-elevated {
-    -fx-background-color: #2C2C2E;
-    -fx-background-radius: 16;
-    -fx-border-radius: 16;
+    -fx-background-color: #1E293B;
+    -fx-background-radius: 14;
+    -fx-border-radius: 14;
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-width: 1;
     -fx-padding: 16;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 8, 0, 0, 2);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.35), 10, 0, 0, 3);
 }
 
 .card-glass {
-    -fx-background-color: rgba(44, 44, 46, 0.85);
-    -fx-background-radius: 18;
-    -fx-border-color: rgba(255, 255, 255, 0.08);
-    -fx-border-radius: 18;
-    -fx-border-width: 0.5;
+    -fx-background-color: rgba(30, 41, 59, 0.88);
+    -fx-background-radius: 16;
+    -fx-border-color: rgba(255, 255, 255, 0.10);
+    -fx-border-radius: 16;
+    -fx-border-width: 1;
     -fx-padding: 16;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.25), 16, 0, 0, 6);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 18, 0, 0, 6);
 }
 
 /* ══════════════════════════════════════════════════════════════
-   STAT CARDS — Dashboard statistics (Total SOS, Critical, etc.)
+   STAT CARDS — Dashboard KPI statistics
    ══════════════════════════════════════════════════════════════ */
 
 .stat-card {
-    -fx-background-color: #2C2C2E;
+    -fx-background-color: #1E293B;
     -fx-background-radius: 14;
     -fx-border-radius: 14;
+    -fx-border-color: rgba(255, 255, 255, 0.06);
+    -fx-border-width: 1;
     -fx-padding: 14 18;
     -fx-min-width: 130;
     -fx-alignment: center;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 6, 0, 0, 2);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 8, 0, 0, 3);
 }
 
 .stat-card-critical {
-    -fx-background-color: rgba(255, 59, 48, 0.15);
+    -fx-background-color: rgba(255, 42, 84, 0.12);
     -fx-background-radius: 14;
     -fx-border-radius: 14;
-    -fx-border-color: rgba(255, 59, 48, 0.3);
+    -fx-border-color: rgba(255, 42, 84, 0.35);
     -fx-border-width: 1;
     -fx-padding: 14 18;
     -fx-min-width: 130;
     -fx-alignment: center;
+    -fx-effect: dropshadow(gaussian, rgba(255, 42, 84, 0.1), 8, 0, 0, 2);
 }
 
 .stat-card-high {
-    -fx-background-color: rgba(255, 159, 10, 0.15);
+    -fx-background-color: rgba(245, 158, 11, 0.12);
     -fx-background-radius: 14;
     -fx-border-radius: 14;
-    -fx-border-color: rgba(255, 159, 10, 0.3);
+    -fx-border-color: rgba(245, 158, 11, 0.35);
     -fx-border-width: 1;
     -fx-padding: 14 18;
     -fx-min-width: 130;
     -fx-alignment: center;
+    -fx-effect: dropshadow(gaussian, rgba(245, 158, 11, 0.1), 8, 0, 0, 2);
 }
 
 .stat-card-medium {
-    -fx-background-color: rgba(255, 214, 10, 0.15);
+    -fx-background-color: rgba(250, 204, 21, 0.10);
     -fx-background-radius: 14;
     -fx-border-radius: 14;
-    -fx-border-color: rgba(255, 214, 10, 0.3);
+    -fx-border-color: rgba(250, 204, 21, 0.30);
     -fx-border-width: 1;
     -fx-padding: 14 18;
     -fx-min-width: 130;
     -fx-alignment: center;
+    -fx-effect: dropshadow(gaussian, rgba(250, 204, 21, 0.08), 8, 0, 0, 2);
 }
 
 .stat-number {
     -fx-font-size: 28;
     -fx-font-weight: bold;
-    -fx-text-fill: #FFFFFF;
+    -fx-text-fill: #F1F5F9;
 }
 
 .stat-label {
     -fx-font-size: 11;
-    -fx-font-weight: normal;
-    -fx-text-fill: #8E8E93;
+    -fx-font-weight: 600;
+    -fx-text-fill: #94A3B8;
     -fx-padding: 4 0 0 0;
 }
 
@@ -140,49 +149,49 @@
    ══════════════════════════════════════════════════════════════ */
 
 .title-large {
-    -fx-font-size: 28;
+    -fx-font-size: 26;
     -fx-font-weight: bold;
-    -fx-text-fill: #FFFFFF;
+    -fx-text-fill: #F1F5F9;
 }
 
 .title-label {
     -fx-font-size: 20;
     -fx-font-weight: bold;
-    -fx-text-fill: #FFFFFF;
+    -fx-text-fill: #F1F5F9;
 }
 
 .subtitle-label {
     -fx-font-size: 13;
     -fx-font-weight: normal;
-    -fx-text-fill: #8E8E93;
+    -fx-text-fill: #94A3B8;
 }
 
 .section-header {
     -fx-font-size: 13;
     -fx-font-weight: bold;
-    -fx-text-fill: #8E8E93;
+    -fx-text-fill: #94A3B8;
     -fx-padding: 8 0 6 2;
     -fx-text-transform: uppercase;
 }
 
 .label-red {
-    -fx-text-fill: #FF3B30;
+    -fx-text-fill: #FF2A54;
 }
 
 .label-green {
-    -fx-text-fill: #30D158;
+    -fx-text-fill: #10B981;
 }
 
 .label-orange {
-    -fx-text-fill: #FF9F0A;
+    -fx-text-fill: #F59E0B;
 }
 
 .label-blue {
-    -fx-text-fill: #0A84FF;
+    -fx-text-fill: #0EA5E9;
 }
 
 .label-yellow {
-    -fx-text-fill: #FFD60A;
+    -fx-text-fill: #FACC15;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -190,28 +199,31 @@
    ══════════════════════════════════════════════════════════════ */
 
 .button {
-    -fx-background-color: #2C2C2E;
-    -fx-text-fill: #0A84FF;
+    -fx-background-color: #1E293B;
+    -fx-text-fill: #0EA5E9;
     -fx-font-size: 15;
     -fx-font-weight: 600;
     -fx-background-radius: 12;
     -fx-border-radius: 12;
+    -fx-border-color: rgba(255, 255, 255, 0.06);
+    -fx-border-width: 1;
     -fx-padding: 10 20;
     -fx-cursor: hand;
 }
 
 .button:hover {
-    -fx-background-color: #3A3A3C;
+    -fx-background-color: #334155;
+    -fx-effect: dropshadow(gaussian, rgba(14, 165, 233, 0.15), 8, 0, 0, 0);
 }
 
 .button:pressed {
-    -fx-background-color: #1C1C1E;
-    -fx-opacity: 0.8;
+    -fx-background-color: #111827;
+    -fx-opacity: 0.85;
 }
 
-/* SOS Button — Grande, urgent, pulsing red */
+/* SOS Button — Grande, urgent, neon crimson glow */
 .sos-button {
-    -fx-background-color: #FF3B30;
+    -fx-background-color: linear-gradient(to bottom, #FF2A54, #D90429);
     -fx-text-fill: #FFFFFF;
     -fx-font-size: 17;
     -fx-font-weight: bold;
@@ -219,37 +231,40 @@
     -fx-border-radius: 16;
     -fx-padding: 16 36;
     -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(255, 59, 48, 0.5), 20, 0, 0, 4);
+    -fx-effect: dropshadow(gaussian, rgba(255, 42, 84, 0.45), 22, 0, 0, 4);
 }
 
 .sos-button:hover {
-    -fx-background-color: #FF453A;
-    -fx-effect: dropshadow(gaussian, rgba(255, 59, 48, 0.7), 25, 0, 0, 6);
+    -fx-background-color: linear-gradient(to bottom, #FF4468, #E0103A);
+    -fx-effect: dropshadow(gaussian, rgba(255, 42, 84, 0.65), 28, 0, 0, 6);
 }
 
 .sos-button:pressed {
-    -fx-background-color: #CC2D25;
-    -fx-effect: dropshadow(gaussian, rgba(255, 59, 48, 0.3), 10, 0, 0, 2);
+    -fx-background-color: #B80230;
+    -fx-effect: dropshadow(gaussian, rgba(255, 42, 84, 0.25), 10, 0, 0, 2);
 }
 
 /* Secondary action buttons */
 .button-secondary {
-    -fx-background-color: #2C2C2E;
-    -fx-text-fill: #FFFFFF;
+    -fx-background-color: #1E293B;
+    -fx-text-fill: #F1F5F9;
     -fx-font-size: 14;
     -fx-background-radius: 12;
     -fx-border-radius: 12;
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-width: 1;
     -fx-padding: 10 18;
     -fx-cursor: hand;
 }
 
 .button-secondary:hover {
-    -fx-background-color: #3A3A3C;
+    -fx-background-color: #334155;
+    -fx-effect: dropshadow(gaussian, rgba(255, 255, 255, 0.05), 6, 0, 0, 0);
 }
 
-/* Dispatch button — Blue accent */
+/* Dispatch button — Tactical Teal accent */
 .dispatch-button {
-    -fx-background-color: #0A84FF;
+    -fx-background-color: linear-gradient(to bottom, #0EA5E9, #0284C7);
     -fx-text-fill: #FFFFFF;
     -fx-font-size: 15;
     -fx-font-weight: bold;
@@ -257,15 +272,16 @@
     -fx-border-radius: 12;
     -fx-padding: 12 24;
     -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(10, 132, 255, 0.4), 12, 0, 0, 3);
+    -fx-effect: dropshadow(gaussian, rgba(14, 165, 233, 0.4), 14, 0, 0, 3);
 }
 
 .dispatch-button:hover {
-    -fx-background-color: #409CFF;
+    -fx-background-color: linear-gradient(to bottom, #38BDF8, #0EA5E9);
+    -fx-effect: dropshadow(gaussian, rgba(14, 165, 233, 0.55), 18, 0, 0, 4);
 }
 
 .dispatch-button:pressed {
-    -fx-background-color: #0870D9;
+    -fx-background-color: #0369A1;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -273,56 +289,56 @@
    ══════════════════════════════════════════════════════════════ */
 
 .text-field {
-    -fx-background-color: #2C2C2E;
-    -fx-text-fill: #FFFFFF;
-    -fx-prompt-text-fill: #636366;
+    -fx-background-color: #1E293B;
+    -fx-text-fill: #F1F5F9;
+    -fx-prompt-text-fill: #64748B;
     -fx-background-radius: 12;
     -fx-border-radius: 12;
-    -fx-border-color: rgba(255, 255, 255, 0.06);
-    -fx-border-width: 0.5;
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-width: 1;
     -fx-padding: 10 14;
     -fx-font-size: 15;
 }
 
 .text-field:focused {
-    -fx-border-color: rgba(255, 59, 48, 0.5);
+    -fx-border-color: rgba(14, 165, 233, 0.6);
     -fx-border-width: 1.5;
-    -fx-background-color: #1C1C1E;
+    -fx-background-color: #111827;
 }
 
 .text-area {
-    -fx-background-color: #1C1C1E;
-    -fx-control-inner-background: #1C1C1E;
-    -fx-text-fill: #FFFFFF;
+    -fx-background-color: #111827;
+    -fx-control-inner-background: #111827;
+    -fx-text-fill: #F1F5F9;
     -fx-background-radius: 14;
     -fx-border-radius: 14;
     -fx-font-size: 14;
 }
 
 .text-area .content {
-    -fx-background-color: #1C1C1E;
+    -fx-background-color: #111827;
     -fx-background-radius: 14;
 }
 
 .text-area:focused {
-    -fx-border-color: rgba(255, 59, 48, 0.4);
+    -fx-border-color: rgba(14, 165, 233, 0.4);
 }
 
-/* Log display — Monospace terminal look */
+/* Log display — Monospace tactical terminal */
 .log-area {
-    -fx-control-inner-background: #0D0D0D;
-    -fx-background-color: #0D0D0D;
-    -fx-text-fill: #30D158;
+    -fx-control-inner-background: #0B0F19;
+    -fx-background-color: #0B0F19;
+    -fx-text-fill: #10B981;
     -fx-font-family: "Cascadia Code", "JetBrains Mono", "Consolas", "SF Mono", monospace;
     -fx-font-size: 12;
     -fx-background-radius: 14;
     -fx-border-radius: 14;
-    -fx-border-color: rgba(48, 209, 88, 0.15);
-    -fx-border-width: 0.5;
+    -fx-border-color: rgba(16, 185, 129, 0.20);
+    -fx-border-width: 1;
 }
 
 .log-area .content {
-    -fx-background-color: #0D0D0D;
+    -fx-background-color: #0B0F19;
     -fx-background-radius: 14;
 }
 
@@ -331,94 +347,96 @@
    ══════════════════════════════════════════════════════════════ */
 
 .combo-box {
-    -fx-background-color: #2C2C2E;
+    -fx-background-color: #1E293B;
     -fx-background-radius: 12;
     -fx-border-radius: 12;
-    -fx-border-color: rgba(255, 255, 255, 0.06);
-    -fx-border-width: 0.5;
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-width: 1;
     -fx-padding: 4 8;
 }
 
 .combo-box .list-cell {
-    -fx-text-fill: #FFFFFF;
+    -fx-text-fill: #F1F5F9;
     -fx-font-size: 14;
     -fx-background-color: transparent;
 }
 
 .combo-box-popup .list-view {
-    -fx-background-color: #2C2C2E;
+    -fx-background-color: #1E293B;
     -fx-background-radius: 12;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 16, 0, 0, 6);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.6), 18, 0, 0, 6);
 }
 
 .combo-box-popup .list-view .list-cell {
     -fx-background-color: transparent;
-    -fx-text-fill: #FFFFFF;
+    -fx-text-fill: #F1F5F9;
     -fx-padding: 8 14;
 }
 
 .combo-box-popup .list-view .list-cell:hover {
-    -fx-background-color: #3A3A3C;
+    -fx-background-color: #334155;
 }
 
 .combo-box-popup .list-view .list-cell:filled:selected {
-    -fx-background-color: rgba(10, 132, 255, 0.3);
-    -fx-text-fill: #0A84FF;
+    -fx-background-color: rgba(14, 165, 233, 0.25);
+    -fx-text-fill: #38BDF8;
 }
 
 /* ══════════════════════════════════════════════════════════════
-   TABLE VIEW — iOS-style clean table
+   TABLE VIEW — Tactical data grid
    ══════════════════════════════════════════════════════════════ */
 
 .table-view {
-    -fx-background-color: #1C1C1E;
-    -fx-border-color: transparent;
+    -fx-background-color: #111827;
+    -fx-border-color: rgba(255, 255, 255, 0.06);
+    -fx-border-width: 1;
     -fx-table-cell-border-color: transparent;
     -fx-background-radius: 14;
+    -fx-border-radius: 14;
 }
 
 .table-view .column-header-background {
-    -fx-background-color: #2C2C2E;
+    -fx-background-color: #1E293B;
 }
 
 .table-view .column-header {
-    -fx-background-color: #2C2C2E;
-    -fx-border-color: transparent transparent #48484A transparent;
-    -fx-border-width: 0 0 0.5 0;
+    -fx-background-color: #1E293B;
+    -fx-border-color: transparent transparent rgba(255, 255, 255, 0.06) transparent;
+    -fx-border-width: 0 0 1 0;
 }
 
 .table-view .column-header .label {
-    -fx-text-fill: #8E8E93;
+    -fx-text-fill: #94A3B8;
     -fx-font-size: 12;
-    -fx-font-weight: 600;
-    -fx-padding: 8 10;
+    -fx-font-weight: 700;
+    -fx-padding: 10 10;
 }
 
 .table-view .filler {
-    -fx-background-color: #2C2C2E;
+    -fx-background-color: #1E293B;
 }
 
 .table-row-cell {
-    -fx-background-color: #1C1C1E;
-    -fx-border-color: transparent transparent #2C2C2E transparent;
-    -fx-border-width: 0 0 0.5 0;
+    -fx-background-color: #111827;
+    -fx-border-color: transparent transparent rgba(255, 255, 255, 0.04) transparent;
+    -fx-border-width: 0 0 1 0;
     -fx-table-cell-border-color: transparent;
 }
 
 .table-row-cell:odd {
-    -fx-background-color: #1C1C1E;
+    -fx-background-color: #0F1629;
 }
 
 .table-row-cell:selected {
-    -fx-background-color: rgba(10, 132, 255, 0.25);
+    -fx-background-color: rgba(14, 165, 233, 0.2);
 }
 
 .table-row-cell:selected .text {
-    -fx-fill: #FFFFFF;
+    -fx-fill: #F1F5F9;
 }
 
 .table-cell {
-    -fx-text-fill: #FFFFFF;
+    -fx-text-fill: #E2E8F0;
     -fx-font-size: 13;
     -fx-padding: 10 10;
     -fx-alignment: CENTER-LEFT;
@@ -426,23 +444,23 @@
 
 /* Severity-based row highlighting */
 .severity-critical {
-    -fx-background-color: rgba(255, 59, 48, 0.12);
+    -fx-background-color: rgba(255, 42, 84, 0.12);
 }
 
 .severity-critical:selected {
-    -fx-background-color: rgba(255, 59, 48, 0.35);
+    -fx-background-color: rgba(255, 42, 84, 0.30);
 }
 
 .severity-high {
-    -fx-background-color: rgba(255, 159, 10, 0.10);
+    -fx-background-color: rgba(245, 158, 11, 0.10);
 }
 
 .severity-medium {
-    -fx-background-color: rgba(255, 214, 10, 0.08);
+    -fx-background-color: rgba(250, 204, 21, 0.08);
 }
 
 /* ══════════════════════════════════════════════════════════════
-   SCROLL BARS — Minimal iOS style
+   SCROLL BARS — Minimal sleek style
    ══════════════════════════════════════════════════════════════ */
 
 .scroll-bar {
@@ -454,12 +472,12 @@
 }
 
 .scroll-bar .thumb {
-    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-background-color: rgba(148, 163, 184, 0.25);
     -fx-background-radius: 4;
 }
 
 .scroll-bar .thumb:hover {
-    -fx-background-color: rgba(255, 255, 255, 0.35);
+    -fx-background-color: rgba(148, 163, 184, 0.45);
 }
 
 .scroll-bar .increment-button,
@@ -479,64 +497,66 @@
    ══════════════════════════════════════════════════════════════ */
 
 .split-pane {
-    -fx-background-color: #000000;
+    -fx-background-color: #0B0F19;
     -fx-padding: 0;
 }
 
 .split-pane-divider {
-    -fx-background-color: #2C2C2E;
+    -fx-background-color: rgba(255, 255, 255, 0.06);
     -fx-padding: 0 1 0 1;
 }
 
 /* ══════════════════════════════════════════════════════════════
-   STATUS INDICATORS
+   STATUS INDICATORS — Neon glow dots
    ══════════════════════════════════════════════════════════════ */
 
 .status-dot-connected {
-    -fx-fill: #30D158;
-    -fx-effect: dropshadow(gaussian, rgba(48, 209, 88, 0.6), 6, 0, 0, 0);
+    -fx-fill: #10B981;
+    -fx-effect: dropshadow(gaussian, rgba(16, 185, 129, 0.7), 8, 0, 0, 0);
 }
 
 .status-dot-disconnected {
-    -fx-fill: #FF3B30;
-    -fx-effect: dropshadow(gaussian, rgba(255, 59, 48, 0.6), 6, 0, 0, 0);
+    -fx-fill: #FF2A54;
+    -fx-effect: dropshadow(gaussian, rgba(255, 42, 84, 0.7), 8, 0, 0, 0);
 }
 
 .status-dot-waiting {
-    -fx-fill: #FF9F0A;
-    -fx-effect: dropshadow(gaussian, rgba(255, 159, 10, 0.6), 6, 0, 0, 0);
+    -fx-fill: #F59E0B;
+    -fx-effect: dropshadow(gaussian, rgba(245, 158, 11, 0.7), 8, 0, 0, 0);
 }
 
 /* ══════════════════════════════════════════════════════════════
-   HEADER BAR — Top navigation strip
+   HEADER BAR — Top C2 navigation strip
    ══════════════════════════════════════════════════════════════ */
 
 .header-bar {
-    -fx-background-color: rgba(28, 28, 30, 0.9);
-    -fx-background-radius: 0 0 18 18;
+    -fx-background-color: rgba(17, 24, 39, 0.95);
+    -fx-background-radius: 0 0 16 16;
     -fx-padding: 14 20;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 8, 0, 0, 3);
+    -fx-border-color: transparent transparent rgba(255, 255, 255, 0.06) transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 10, 0, 0, 4);
 }
 
 /* ══════════════════════════════════════════════════════════════
-   WEB VIEW — Map container
+   WEB VIEW — Map container with subtle border
    ══════════════════════════════════════════════════════════════ */
 
 .map-container {
-    -fx-background-color: #1C1C1E;
+    -fx-background-color: #111827;
     -fx-background-radius: 14;
     -fx-border-radius: 14;
-    -fx-border-color: rgba(255, 255, 255, 0.06);
-    -fx-border-width: 0.5;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 6, 0, 0, 2);
+    -fx-border-color: rgba(14, 165, 233, 0.15);
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 10, 0, 0, 3);
 }
 
 /* ══════════════════════════════════════════════════════════════
-   FORM LAYOUT — iOS grouped table style
+   FORM LAYOUT — Grouped inputs
    ══════════════════════════════════════════════════════════════ */
 
 .form-group {
-    -fx-background-color: #1C1C1E;
+    -fx-background-color: #111827;
     -fx-background-radius: 14;
     -fx-border-radius: 14;
     -fx-padding: 4 0;
@@ -544,12 +564,12 @@
 
 .form-row {
     -fx-padding: 10 16;
-    -fx-border-color: transparent transparent #2C2C2E transparent;
-    -fx-border-width: 0 0 0.5 0;
+    -fx-border-color: transparent transparent rgba(255, 255, 255, 0.06) transparent;
+    -fx-border-width: 0 0 1 0;
 }
 
 .form-label {
-    -fx-text-fill: #FFFFFF;
+    -fx-text-fill: #F1F5F9;
     -fx-font-size: 15;
     -fx-min-width: 120;
 }
@@ -559,12 +579,15 @@
    ══════════════════════════════════════════════════════════════ */
 
 .tooltip {
-    -fx-background-color: rgba(58, 58, 60, 0.95);
+    -fx-background-color: rgba(30, 41, 59, 0.96);
     -fx-background-radius: 10;
-    -fx-text-fill: #FFFFFF;
+    -fx-text-fill: #F1F5F9;
     -fx-font-size: 13;
     -fx-padding: 8 14;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 10, 0, 0, 4);
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 12, 0, 0, 4);
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -576,7 +599,161 @@
 }
 
 .pulse-red {
-    -fx-border-color: rgba(255, 59, 48, 0.5);
+    -fx-border-color: rgba(255, 42, 84, 0.5);
     -fx-border-width: 2;
     -fx-border-radius: 16;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TAB PANE — C2 Command Center Style
+   ══════════════════════════════════════════════════════════════ */
+
+.c2-tab-pane {
+    -fx-background-color: #111827;
+    -fx-background-radius: 14;
+}
+
+.c2-tab-pane > .tab-header-area {
+    -fx-padding: 0;
+}
+
+.c2-tab-pane > .tab-header-area > .headers-region > .tab {
+    -fx-background-color: #1E293B;
+    -fx-background-radius: 10 10 0 0;
+    -fx-padding: 8 16;
+    -fx-border-color: transparent;
+}
+
+.c2-tab-pane > .tab-header-area > .headers-region > .tab:selected {
+    -fx-background-color: #334155;
+    -fx-border-color: transparent transparent #0EA5E9 transparent;
+    -fx-border-width: 0 0 2 0;
+}
+
+.c2-tab-pane > .tab-header-area > .headers-region > .tab .tab-label {
+    -fx-text-fill: #94A3B8;
+    -fx-font-size: 12;
+    -fx-font-weight: 600;
+}
+
+.c2-tab-pane > .tab-header-area > .headers-region > .tab:selected .tab-label {
+    -fx-text-fill: #F1F5F9;
+}
+
+.c2-tab-pane > .tab-header-area > .tab-header-background {
+    -fx-background-color: #111827;
+}
+
+.c2-tab-pane > .tab-content-area {
+    -fx-background-color: #111827;
+    -fx-padding: 4;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   VICTIM DETAIL PREVIEW CARD
+   ══════════════════════════════════════════════════════════════ */
+
+.victim-detail-card {
+    -fx-background-color: rgba(30, 41, 59, 0.95);
+    -fx-background-radius: 14;
+    -fx-border-radius: 14;
+    -fx-border-color: rgba(14, 165, 233, 0.35);
+    -fx-border-width: 1;
+    -fx-padding: 12 16;
+    -fx-effect: dropshadow(gaussian, rgba(14, 165, 233, 0.15), 12, 0, 0, 3);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RELAY MONITOR CARDS — NodeClient Dashboard
+   ══════════════════════════════════════════════════════════════ */
+
+.relay-stat-card {
+    -fx-background-color: #1E293B;
+    -fx-background-radius: 14;
+    -fx-border-radius: 14;
+    -fx-border-color: rgba(255, 255, 255, 0.06);
+    -fx-border-width: 1;
+    -fx-padding: 14;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 8, 0, 0, 2);
+}
+
+.relay-stat-card .stat-number {
+    -fx-font-size: 22;
+}
+
+.relay-stat-card-online {
+    -fx-background-color: rgba(16, 185, 129, 0.10);
+    -fx-background-radius: 14;
+    -fx-border-radius: 14;
+    -fx-border-color: rgba(16, 185, 129, 0.30);
+    -fx-border-width: 1;
+    -fx-padding: 14;
+}
+
+.relay-stat-card-offline {
+    -fx-background-color: rgba(255, 42, 84, 0.10);
+    -fx-background-radius: 14;
+    -fx-border-radius: 14;
+    -fx-border-color: rgba(255, 42, 84, 0.30);
+    -fx-border-width: 1;
+    -fx-padding: 14;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   COMMAND RECEIVED CARD — Flash animation for dispatch
+   ══════════════════════════════════════════════════════════════ */
+
+.dispatch-received-card {
+    -fx-background-color: rgba(14, 165, 233, 0.12);
+    -fx-background-radius: 16;
+    -fx-border-radius: 16;
+    -fx-border-color: rgba(14, 165, 233, 0.45);
+    -fx-border-width: 1.5;
+    -fx-padding: 16;
+    -fx-effect: dropshadow(gaussian, rgba(14, 165, 233, 0.25), 16, 0, 0, 4);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PROGRESS BAR — Load Gauge for Relay
+   ══════════════════════════════════════════════════════════════ */
+
+.progress-bar {
+    -fx-background-color: #1E293B;
+    -fx-background-radius: 6;
+    -fx-pref-height: 8;
+}
+
+.progress-bar > .bar {
+    -fx-background-color: linear-gradient(to right, #10B981, #0EA5E9);
+    -fx-background-radius: 6;
+    -fx-background-insets: 0;
+}
+
+.progress-bar > .track {
+    -fx-background-color: #334155;
+    -fx-background-radius: 6;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   C2 SPECIFIC — Mesh status pill badge
+   ══════════════════════════════════════════════════════════════ */
+
+.mesh-status-badge {
+    -fx-background-color: rgba(16, 185, 129, 0.15);
+    -fx-background-radius: 20;
+    -fx-border-radius: 20;
+    -fx-border-color: rgba(16, 185, 129, 0.4);
+    -fx-border-width: 1;
+    -fx-padding: 4 14;
+    -fx-font-size: 11;
+    -fx-font-weight: 700;
+    -fx-text-fill: #10B981;
+}
+
+.clock-label {
+    -fx-font-family: "Cascadia Code", "JetBrains Mono", "Consolas", monospace;
+    -fx-font-size: 16;
+    -fx-font-weight: bold;
+    -fx-text-fill: #00F5D4;
+    -fx-effect: dropshadow(gaussian, rgba(0, 245, 212, 0.3), 6, 0, 0, 0);
 }

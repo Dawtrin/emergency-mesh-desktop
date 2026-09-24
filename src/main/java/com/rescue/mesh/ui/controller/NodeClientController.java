@@ -12,6 +12,7 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
@@ -21,6 +22,10 @@ import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.ResourceBundle;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * JavaFX Controller cho Node Giả Lập (Victim / Relay).
@@ -57,6 +62,7 @@ public class NodeClientController implements Initializable,
     @FXML private VBox sosFormContainer;
     @FXML private VBox dispatchCard;
     @FXML private Label lblDispatchContent;
+    @FXML private Button btnAckDispatch;
     @FXML private TextField txtSenderName;
     @FXML private ComboBox<String> cboAlertType;
     @FXML private ComboBox<String> cboSeverity;
@@ -68,6 +74,16 @@ public class NodeClientController implements Initializable,
     @FXML private Button btnQuickSos;
     @FXML private Button btnHeartbeat;
     @FXML private TextArea txtLog;
+
+    // --- Phase 2: Relay Dashboard FXML bindings ---
+    @FXML private VBox relayDashboardContainer;
+    @FXML private Label lblRelayUpstreamStatus;
+    @FXML private Label lblRelayUpstreamDetail;
+    @FXML private Label lblRelayPacketsRelayed;
+    @FXML private Label lblRelayCurrentLoad;
+    @FXML private ProgressBar relayLoadBar;
+    @FXML private Label lblRelayHeartbeat;
+    @FXML private Label lblRelayHeartbeatInterval;
 
     // =========================================================
     // STATE
@@ -82,6 +98,21 @@ public class NodeClientController implements Initializable,
 
     /** Đếm số gói tin SOS đã gửi */
     private int sentCount = 0;
+
+    /** Đếm số gói tin đang xử lý tại relay (cho LOAD_REPORT) */
+    private final AtomicInteger activeConnections = new AtomicInteger(0);
+
+    /** Tổng số gói tin đã relay xong (cho LOAD_REPORT) */
+    private final AtomicInteger totalProcessed = new AtomicInteger(0);
+
+    /** Scheduler gửi heartbeat LOAD_REPORT định kỳ (chỉ dùng cho RELAY) */
+    private ScheduledExecutorService heartbeatScheduler;
+
+    /** Scheduler cập nhật Relay Dashboard UI mỗi giây */
+    private ScheduledExecutorService relayDashboardScheduler;
+
+    /** Timestamp heartbeat gửi thành công gần nhất */
+    private volatile long lastHeartbeatSentTime = 0;
 
     // =========================================================
     // INITIALIZE — Pha 1: Setup UI components
@@ -136,11 +167,16 @@ public class NodeClientController implements Initializable,
         lblNodeInfo.setText("Port: " + config.getListenPort()
                 + " → Next: " + (config.getNextHopPort() > 0 ? config.getNextHopPort() : "N/A"));
 
-        // Ẩn form SOS nếu là RELAY mode
+        // Ẩn form SOS nếu là RELAY mode, hiện Relay Dashboard
         if (config.getMode() == NodeConfig.NodeMode.RELAY) {
             sosFormContainer.setVisible(false);
             sosFormContainer.setManaged(false);
-            appendLog("[INFO] Chế độ RELAY — tự động chuyển tiếp gói tin.");
+            // Phase 2: Hiện Relay Monitor Dashboard
+            if (relayDashboardContainer != null) {
+                relayDashboardContainer.setVisible(true);
+                relayDashboardContainer.setManaged(true);
+            }
+            appendLog("[INFO] Chế độ RELAY — Relay Monitor Dashboard đã kích hoạt.");
         }
 
         // Khởi tạo RoutingEngine — controller này implement callback
@@ -160,6 +196,97 @@ public class NodeClientController implements Initializable,
         socketServer.start();
 
         appendLog("[INFO] Node " + config.getNodeId() + " đang khởi tạo...");
+
+        // Nếu là RELAY → bắt đầu gửi LOAD_REPORT định kỳ mỗi 3 giây
+        if (config.getMode() == NodeConfig.NodeMode.RELAY) {
+            startHeartbeatScheduler();
+            startRelayDashboardRefresh();
+        }
+    }
+
+    /**
+     * Phase 2: Khởi động scheduler làm mới Relay Dashboard UI mỗi giây.
+     */
+    private void startRelayDashboardRefresh() {
+        relayDashboardScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "RelayDashboard-" + config.getNodeId());
+            t.setDaemon(true);
+            return t;
+        });
+
+        relayDashboardScheduler.scheduleAtFixedRate(() -> {
+            Platform.runLater(this::refreshRelayDashboard);
+        }, 1, 1, TimeUnit.SECONDS);
+    }
+
+    /**
+     * Phase 2: Cập nhật thông số trên Relay Dashboard.
+     */
+    private void refreshRelayDashboard() {
+        if (lblRelayPacketsRelayed != null) {
+            lblRelayPacketsRelayed.setText(String.valueOf(totalProcessed.get()));
+        }
+        if (lblRelayCurrentLoad != null) {
+            int load = activeConnections.get();
+            lblRelayCurrentLoad.setText(String.valueOf(load));
+            if (relayLoadBar != null) {
+                relayLoadBar.setProgress(Math.min(load / 10.0, 1.0));
+            }
+        }
+        if (lblRelayHeartbeat != null && lastHeartbeatSentTime > 0) {
+            long secAgo = (System.currentTimeMillis() - lastHeartbeatSentTime) / 1000;
+            lblRelayHeartbeat.setText(secAgo + "s trước");
+        }
+        if (lblRelayUpstreamStatus != null) {
+            lblRelayUpstreamStatus.setText(config.getNextHopPort() > 0 ? "CONNECTED" : "N/A");
+        }
+        if (lblRelayUpstreamDetail != null) {
+            lblRelayUpstreamDetail.setText(config.getNextHopHost() + ":" + config.getNextHopPort());
+        }
+    }
+
+    /**
+     * Khởi động scheduler gửi LOAD_REPORT mỗi 3 giây lên upstream.
+     * Chỉ dùng cho chế độ RELAY — báo cáo tải cho Base Station.
+     */
+    private void startHeartbeatScheduler() {
+        heartbeatScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "Heartbeat-" + config.getNodeId());
+            t.setDaemon(true);
+            return t;
+        });
+
+        heartbeatScheduler.scheduleAtFixedRate(() -> {
+            try {
+                MeshPacket loadReport = PacketFactory.createLoadReport(
+                        config.getNodeId(),
+                        activeConnections.get(),
+                        totalProcessed.get(),
+                        config.getListenPort()
+                );
+
+                // Gửi trực tiếp đến upstream (Base Station) qua SocketClient
+                boolean sent = com.rescue.mesh.network.SocketClient.send(
+                        config.getNextHopHost(),
+                        config.getNextHopPort(),
+                        loadReport
+                );
+
+                if (sent) {
+                    lastHeartbeatSentTime = System.currentTimeMillis();
+                    Platform.runLater(() ->
+                            appendLog("[HEARTBEAT] LOAD_REPORT → "
+                                    + config.getNextHopHost() + ":" + config.getNextHopPort()
+                                    + " | load=" + activeConnections.get()
+                                    + " total=" + totalProcessed.get())
+                    );
+                }
+            } catch (Exception e) {
+                System.err.println("[ERROR] Heartbeat gửi thất bại: " + e.getMessage());
+            }
+        }, 2, 3, TimeUnit.SECONDS); // Delay 2s ban đầu, lặp lại mỗi 3s
+
+        appendLog("[INFO] Heartbeat scheduler đã bắt đầu (mỗi 3 giây)");
     }
 
     // =========================================================
@@ -291,6 +418,9 @@ public class NodeClientController implements Initializable,
 
     @Override
     public void onPacketRelayed(MeshPacket packet, int nextHop) {
+        // Cập nhật bộ đếm tải cho LOAD_REPORT
+        totalProcessed.incrementAndGet();
+
         Platform.runLater(() ->
                 appendLog("[RELAY] " + shortId(packet.getPacketId())
                         + " → port " + nextHop
@@ -316,9 +446,11 @@ public class NodeClientController implements Initializable,
     @Override
     public void onDispatchReceived(MeshPacket packet) {
         Platform.runLater(() -> {
-            // Hiện card dispatch
+            // Hiện card dispatch với style đặc biệt
             dispatchCard.setVisible(true);
             dispatchCard.setManaged(true);
+            dispatchCard.getStyleClass().removeAll("dispatch-received-card");
+            dispatchCard.getStyleClass().add("dispatch-received-card");
 
             String content = "";
             if (packet.getPayload() != null) {
@@ -326,11 +458,40 @@ public class NodeClientController implements Initializable,
                         + "\nMức ưu tiên: " + packet.getPayload().getSeverity();
             }
             lblDispatchContent.setText(content);
-            appendLog("[INFO] *** NHẬN LỆNH CHỈ ĐẠO TỪ TRẠM CHỈ HUY ***");
+            appendLog("╔══════════════════════════════════════════╗");
+            appendLog("║  📋 NHẬN LỆNH CHỈ ĐẠO TỪ TRẠM CHỈ HUY");
+            appendLog("╚══════════════════════════════════════════╝");
             if (packet.getPayload() != null) {
-                appendLog("[INFO]   " + packet.getPayload().getMessage());
+                appendLog("[LỆNH]   " + packet.getPayload().getMessage());
             }
+
+            // Phase 2: Phát âm thanh thông báo khi nhận lệnh
+            try {
+                java.awt.Toolkit.getDefaultToolkit().beep();
+            } catch (Exception ignored) {}
         });
+    }
+
+    /**
+     * Phase 2: Xử lý nút "Đã Hiểu Lệnh" — xác nhận đã nhận lệnh chỉ đạo.
+     */
+    @FXML
+    private void onAcknowledgeDispatch() {
+        dispatchCard.getStyleClass().remove("dispatch-received-card");
+        appendLog("[INFO] ✅ Đã xác nhận nhận lệnh chỉ đạo.");
+        // Ẩn card sau 2 giây
+        new Thread(() -> {
+            try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+            Platform.runLater(() -> {
+                dispatchCard.setVisible(false);
+                dispatchCard.setManaged(false);
+            });
+        }).start();
+    }
+
+    @Override
+    public void onLoadReportReceived(MeshPacket packet) {
+        // Client node không xử lý LOAD_REPORT — chỉ Base Station xử lý
     }
 
     // =========================================================
@@ -415,6 +576,28 @@ public class NodeClientController implements Initializable,
      * Dọn dẹp tài nguyên khi đóng cửa sổ.
      */
     public void shutdown() {
+        if (heartbeatScheduler != null) {
+            heartbeatScheduler.shutdown();
+            try {
+                if (!heartbeatScheduler.awaitTermination(3, TimeUnit.SECONDS)) {
+                    heartbeatScheduler.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                heartbeatScheduler.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
+        if (relayDashboardScheduler != null) {
+            relayDashboardScheduler.shutdown();
+            try {
+                if (!relayDashboardScheduler.awaitTermination(2, TimeUnit.SECONDS)) {
+                    relayDashboardScheduler.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                relayDashboardScheduler.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
         if (socketServer != null) {
             socketServer.stop();
         }

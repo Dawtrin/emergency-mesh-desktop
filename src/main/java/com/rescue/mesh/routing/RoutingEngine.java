@@ -82,6 +82,14 @@ public class RoutingEngine {
          * @param packet Gói tin lệnh điều phối
          */
         void onDispatchReceived(MeshPacket packet);
+
+        /**
+         * Được gọi khi nhận được gói tin LOAD_REPORT từ relay node.
+         * Base Station dùng để cập nhật bảng định tuyến và LoadBalancer.
+         *
+         * @param packet Gói tin báo cáo tải từ relay
+         */
+        void onLoadReportReceived(MeshPacket packet);
     }
 
     // =========================================================
@@ -162,6 +170,20 @@ public class RoutingEngine {
         if (packetId == null || packetId.trim().isEmpty()) {
             System.err.println("[ERROR] [" + myNodeId + "] processPacket: packetId null hoặc rỗng");
             callback.onPacketDropped("UNKNOWN", "PARSE_ERROR");
+            return;
+        }
+
+        // ── Bước 0: LOAD_REPORT không cần kiểm tra duplicate ──────────
+        // LOAD_REPORT là heartbeat định kỳ mỗi 3 giây, luôn có UUID mới,
+        // nhưng ta vẫn xử lý riêng không cần qua cache để tránh tốn bộ nhớ.
+        if (MeshPacket.TYPE_LOAD_REPORT.equals(packet.getPacketType())) {
+            System.out.println("[LOAD] [" + myNodeId + "] LOAD_REPORT từ "
+                    + packet.getSourceNodeId()
+                    + (packet.getPayload() != null
+                        ? " | load=" + packet.getPayload().getCurrentLoad()
+                          + " total=" + packet.getPayload().getProcessedTotal()
+                        : ""));
+            callback.onLoadReportReceived(packet);
             return;
         }
 
@@ -270,7 +292,12 @@ public class RoutingEngine {
         ROUTING_TABLE.put("NODE_A", 8001);
         ROUTING_TABLE.put(MeshPacket.NODE_B_RELAY, 8002);
         ROUTING_TABLE.put("NODE_B", 8002);
+        ROUTING_TABLE.put("NODE_B1_RELAY", 8002);
+        ROUTING_TABLE.put("NODE_B1", 8002);
+        ROUTING_TABLE.put("NODE_B2_RELAY", 8003);
+        ROUTING_TABLE.put("NODE_B2", 8003);
         ROUTING_TABLE.put(MeshPacket.NODE_BASE_STATION, 8888);
+        ROUTING_TABLE.put("BASE_STATION", 8888);
     }
 
     /**
@@ -283,14 +310,44 @@ public class RoutingEngine {
     }
 
     /**
-     * Xác định cổng đích cần chuyển tiếp (Reverse Route hoặc Upstream Hop).
+     * Tra cứu port của một node ID từ ROUTING_TABLE hoặc quy ước đặt tên.
+     */
+    public static Integer resolveNodePort(String nodeId) {
+        if (nodeId == null) return null;
+        Integer port = ROUTING_TABLE.get(nodeId);
+        if (port != null && port > 0) return port;
+        if (nodeId.contains("NODE_B2")) return 8003;
+        if (nodeId.contains("NODE_B1") || nodeId.contains("NODE_B")) return 8002;
+        if (nodeId.contains("NODE_A") || nodeId.contains("VICTIM")) return 8001;
+        if (nodeId.contains("BASE")) return 8888;
+        return null;
+    }
+
+    /**
+     * Xác định cổng đích cần chuyển tiếp:
+     *   1. Nếu gói tin có lộ trình nguồn chỉ định (Strict Source Routing) -> đi theo next hop trong designatedRoute
+     *   2. Nếu là DISPATCH_CMD hoặc định tuyến ngược theo đích đến
+     *   3. Mặc định chuyển tiếp theo nextHopPort (hướng về Base Station)
      */
     private int resolveTargetPort(MeshPacket packet) {
+        // 1. Strict Source Routing: Nếu có designatedRoute, trích xuất chặng kế tiếp
+        if (packet.getDesignatedRoute() != null && !packet.getDesignatedRoute().isEmpty()) {
+            String nextNode = packet.getNextHopFromDesignatedRoute(myNodeId);
+            if (nextNode != null) {
+                Integer port = resolveNodePort(nextNode);
+                if (port != null && port > 0) {
+                    System.out.println("[SOURCE-ROUTE] [" + myNodeId + "] Chuyển tiếp theo lộ trình nguồn tới "
+                            + nextNode + " (port " + port + ")");
+                    return port;
+                }
+            }
+        }
+
         String destId = packet.getDestinationNodeId();
 
-        // 1. Nếu là DISPATCH_CMD hoặc đích đến là node cụ thể khác BASE_STATION (Định tuyến ngược)
+        // 2. Nếu là DISPATCH_CMD hoặc đích đến là node cụ thể khác BASE_STATION (Định tuyến ngược)
         if (destId != null && !MeshPacket.NODE_BASE_STATION.equals(destId)) {
-            Integer targetPort = ROUTING_TABLE.get(destId);
+            Integer targetPort = resolveNodePort(destId);
             if (targetPort != null && targetPort > 0) {
                 return targetPort;
             }
@@ -299,7 +356,7 @@ public class RoutingEngine {
             }
         }
 
-        // 2. Mặc định chuyển tiếp theo nextHopPort cấu hình (hướng về Base Station)
+        // 3. Mặc định chuyển tiếp theo nextHopPort cấu hình (hướng về Base Station)
         return nextHopPort;
     }
 
