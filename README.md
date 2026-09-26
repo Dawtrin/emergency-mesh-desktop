@@ -6,6 +6,8 @@ Hệ thống điều hành cứu nạn khẩn cấp ngoại tuyến phục vụ 
 chuyển tiếp đa bước qua TCP/IP có sẵn, không tự tạo radio mesh.
 Hướng dẫn Windows + Ubuntu VM/hai laptop và toàn bộ lệnh kiểm thử:
 [`docs/demo/two-machine-vbox-test.md`](docs/demo/two-machine-vbox-test.md).
+Hướng dẫn copy lệnh cho ba laptop Windows và Windows + Ubuntu VM:
+[`docs/demo/three-windows-and-ubuntu-demo.md`](docs/demo/three-windows-and-ubuntu-demo.md).
 Tổng quan đúng phạm vi: [`PROJECT_OVERVIEW.md`](PROJECT_OVERVIEW.md).
 
 Nhánh `sontien` tích hợp giao diện/monitoring từ `main`, giữ canonical v1,
