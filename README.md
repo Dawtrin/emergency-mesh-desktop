@@ -12,6 +12,26 @@ Nhánh `sontien` tích hợp giao diện/monitoring từ `main`, giữ canonical
 SQLite, Dispatch outbox và bản đồ offline. Relay heartbeat phục vụ chọn tuyến
 Dispatch và failover; SOS của Victim vẫn dùng upstream cấu hình cố định.
 
+### Khởi động nhanh hai máy
+
+Windows: double-click `scripts\windows\START_BASE.cmd`, sau đó nhập IP Ubuntu.
+Lần đầu, mở PowerShell Administrator và chạy:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\windows\allow-base-firewall.ps1 -UbuntuIp 192.168.56.101
+```
+
+Ubuntu Desktop: nhập IP Windows để mở đồng thời Relay và Victim:
+
+```bash
+bash scripts/ubuntu/start-demo.sh 192.168.56.1
+```
+
+Thay hai IP mẫu bằng IP Host-only thật. Firewall script là tùy chọn chạy riêng,
+chỉ mở TCP 18888 cho IP Ubuntu trên profile Private; launcher không đổi firewall.
+Sau khi `git pull`, build lại: Windows thêm `-Rebuild` vào launcher;
+Ubuntu dùng `REBUILD=1 bash scripts/ubuntu/start-demo.sh 192.168.56.1`.
+
 ## 1. Yêu cầu môi trường
 
 - **Java Development Kit**: JDK 21 LTS trở lên (ví dụ: Eclipse Temurin 21, Microsoft OpenJDK 21, Oracle JDK 21).

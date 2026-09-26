@@ -31,6 +31,9 @@ android-app/app/build/
 !mvnw
 !mvnw.cmd
 !scripts/preflight-demo.ps1
+!scripts/windows/*.ps1
+!scripts/windows/*.cmd
+!scripts/ubuntu/*.sh
 !android-app/gradlew.bat
 
 # Local documentation files (not pushed to Git repository)

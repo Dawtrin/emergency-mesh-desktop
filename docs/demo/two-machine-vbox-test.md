@@ -250,6 +250,19 @@ Port `18003` chỉ cần khi chạy Relay-02 ở mục 13.1.
 
 ## 7. Khởi động Base Station trên Windows
 
+### Cách nhanh bằng script
+
+Double-click `scripts\windows\START_BASE.cmd`, hoặc chạy:
+
+```powershell
+.\scripts\windows\START_BASE.cmd -UbuntuIp 192.168.56.101
+```
+
+Script tự kiểm tra JDK 21, tự build nếu chưa có JAR và mở Base Station.
+Sau khi cập nhật code, thêm `-Rebuild` để không chạy JAR cũ. Launcher không sửa
+firewall hay file cấu hình. Không chạy thêm lệnh `java` bên dưới nếu đã mở app
+bằng launcher, tránh lỗi trùng cổng.
+
 Trước khi chạy, sửa `relay.host` trong `config\basestation.properties` thành IP
 Host-only thật của Ubuntu. Có thể chạy ngắn gọn bằng file cấu hình:
 
@@ -283,6 +296,19 @@ Giữ cửa sổ này mở. `test-tiles.mbtiles` là map fixture nhỏ để ki�
 năng; có thể thay bằng MBTiles thật sau.
 
 ## 8. Khởi động Relay trên Ubuntu
+
+### Cách nhanh: mở cả Relay và Victim
+
+```bash
+cd ~/emergency-mesh-desktop
+bash scripts/ubuntu/start-demo.sh 192.168.56.1
+```
+
+Nếu Ubuntu Desktop có `gnome-terminal`, script mở hai terminal riêng, giữ log
+khi node lỗi. Nếu không có, script in hai lệnh để chạy bằng tay trong hai
+terminal riêng. Sau khi `git pull`, dùng
+`REBUILD=1 bash scripts/ubuntu/start-demo.sh 192.168.56.1` để build lại.
+Nếu đã mở bằng script này, bỏ qua các lệnh chạy Relay/Victim riêng bên dưới.
 
 Sửa `upstream.host` trong `config/nodeB1.properties` thành IP Host-only thật
 của Windows, sau đó có thể chạy:
