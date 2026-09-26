@@ -2,6 +2,16 @@
 
 Hệ thống điều hành cứu nạn khẩn cấp ngoại tuyến phục vụ trạm chỉ huy dã chiến (Java + JavaFX Desktop) kết nối mạng Mesh cứu nạn di động.
 
+**Phạm vi demo hiện tại: máy tính, chưa cần điện thoại.** Đây là mô phỏng
+chuyển tiếp đa bước qua TCP/IP có sẵn, không tự tạo radio mesh.
+Hướng dẫn Windows + Ubuntu VM/hai laptop và toàn bộ lệnh kiểm thử:
+[`docs/demo/two-machine-vbox-test.md`](docs/demo/two-machine-vbox-test.md).
+Tổng quan đúng phạm vi: [`PROJECT_OVERVIEW.md`](PROJECT_OVERVIEW.md).
+
+Nhánh `sontien` tích hợp giao diện/monitoring từ `main`, giữ canonical v1,
+SQLite, Dispatch outbox và bản đồ offline. Relay heartbeat phục vụ chọn tuyến
+Dispatch và failover; SOS của Victim vẫn dùng upstream cấu hình cố định.
+
 ## 1. Yêu cầu môi trường
 
 - **Java Development Kit**: JDK 21 LTS trở lên (ví dụ: Eclipse Temurin 21, Microsoft OpenJDK 21, Oracle JDK 21).
@@ -54,7 +64,7 @@ tại [`docs/demo/desktop-topology.md`](docs/demo/desktop-topology.md). Internet
 không cần thiết; các ứng dụng trao đổi TCP qua IPv4 nội bộ. Đây là desktop demo,
 chưa phải mesh điện thoại/Wi-Fi Direct.
 
-### 3.1. Chạy Trạm chỉ huy Trung tâm (Base Station Server - Port 8888)
+### 3.1. Chạy Trạm chỉ huy Trung tâm (lệnh demo dùng port 18888)
 
 **Cách 1: Khởi chạy trực tiếp qua JavaFX Plugin:**
 ```powershell
@@ -66,12 +76,12 @@ chưa phải mesh điện thoại/Wi-Fi Direct.
 java -jar target\BaseStationServer-jar-with-dependencies.jar --id BASE-01 --bind-host 127.0.0.1 --bind-port 18888 --relay-host 127.0.0.1 --relay-port 18002 --map-file C:\Maps\demo.mbtiles
 ```
 
-### 3.2. Chạy Node Trung gian Tiếp sức (Relay Node - Port 8002 → Forward 8888)
+### 3.2. Chạy Node Trung gian Tiếp sức (port 18002 → 18888)
 ```powershell
 java -jar target\MeshNodeClient-jar-with-dependencies.jar --mode RELAY --id RELAY-01 --bind-host 127.0.0.1 --bind-port 18002 --next-hop-host 127.0.0.1 --next-hop-port 18888 --victim-id VICTIM-01 --victim-host 127.0.0.1 --victim-port 18001
 ```
 
-### 3.3. Chạy Node Nạn nhân (Victim Node - Port 8001 → Forward 8002)
+### 3.3. Chạy Node Nạn nhân (port 18001 → 18002)
 ```powershell
 java -jar target\MeshNodeClient-jar-with-dependencies.jar --mode VICTIM --id VICTIM-01 --bind-host 127.0.0.1 --bind-port 18001 --next-hop-host 127.0.0.1 --next-hop-port 18002
 ```

@@ -164,6 +164,33 @@ class RoutingEngineForwardingTest {
         assertEquals(checksum, packet.getChecksum());
     }
 
+    @Test
+    void dispatchLearnsReplyEndpointAndDuplicateRegeneratesAckWithoutRedelivery() {
+        AtomicReference<String> endpoint = new AtomicReference<>();
+        AtomicInteger ackCount = new AtomicInteger();
+        RecordingCallback callback = new RecordingCallback();
+        RoutingEngine engine = engine("VICTIM-01", null, -1, callback,
+                (host, port, packet) -> {
+                    endpoint.set(host + ':' + port);
+                    if (MeshPacket.TYPE_ACK.equals(packet.getPacketType())) ackCount.incrementAndGet();
+                    return true;
+                });
+        MeshPacket dispatch = PacketFactory.createDispatchCommand(
+                "VICTIM-01", "Evacuate", MeshPacket.SEVERITY_HIGH);
+        com.google.gson.JsonObject reply = new com.google.gson.JsonObject();
+        reply.addProperty("reply_port", 18003);
+        dispatch.getPayload().setDiscoveryInfo(reply);
+        dispatch.computeAndSetChecksum(gson);
+
+        engine.processPacket(dispatch, "192.168.56.101");
+        engine.processPacket(dispatch, "192.168.56.101");
+
+        assertAll(
+                () -> assertEquals("192.168.56.101:18003", endpoint.get()),
+                () -> assertEquals(2, ackCount.get()),
+                () -> assertEquals(1, callback.dispatches.get()));
+    }
+
     private RoutingEngine engine(String id, String host, int port, RecordingCallback callback,
                                  RoutingEngine.PacketSender sender) {
         RoutingEngine engine = new RoutingEngine(id, host, port, callback, sender);
@@ -173,12 +200,13 @@ class RoutingEngineForwardingTest {
 
     private static class RecordingCallback implements RoutingEngine.RoutingCallback {
         final AtomicInteger relayed = new AtomicInteger();
+        final AtomicInteger dispatches = new AtomicInteger();
         final AtomicReference<String> lastDrop = new AtomicReference<>();
 
         @Override public void onPacketArrived(MeshPacket packet) {}
         @Override public void onPacketRelayed(MeshPacket packet, int nextHop) { relayed.incrementAndGet(); }
         @Override public void onPacketDropped(String packetId, String reason) { lastDrop.set(reason); }
         @Override public void onForwardError(int nextHop, String errorMessage) {}
-        @Override public void onDispatchReceived(MeshPacket packet) {}
+        @Override public void onDispatchReceived(MeshPacket packet) { dispatches.incrementAndGet(); }
     }
 }

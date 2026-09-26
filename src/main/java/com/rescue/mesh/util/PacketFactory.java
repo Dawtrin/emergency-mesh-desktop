@@ -171,6 +171,19 @@ public class PacketFactory {
         return packet;
     }
 
+    public static MeshPacket createHeartbeat(String sourceNodeId, int listenPort,
+                                             int currentLoad, int processedTotal) {
+        MeshPacket packet = createHeartbeat(sourceNodeId);
+        Map<String, Object> status = new LinkedHashMap<>();
+        status.put("kind", "relay_status");
+        status.put("listen_port", listenPort);
+        status.put("current_load", Math.max(0, currentLoad));
+        status.put("processed_total", Math.max(0, processedTotal));
+        packet.getPayload().setDiscoveryInfo(status);
+        packet.computeAndSetChecksum(GSON);
+        return packet;
+    }
+
     // =========================================================
     // ROUTE_DISCOVERY — Khám phá tuyến đường ad-hoc
     // =========================================================

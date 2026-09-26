@@ -38,6 +38,13 @@ Tắt Ubuntu VM, sau đó vào `Settings` → `Network`:
 NAT-only không phù hợp cho hướng dẫn này vì Windows có thể không truy cập
 được service bên trong Ubuntu nếu chưa cấu hình port forwarding.
 
+### Dùng hai laptop thật thay cho VirtualBox
+
+Kết nối hai laptop vào cùng Wi-Fi/hotspot hoặc cùng LAN. Laptop 1 chạy Base
+Station; laptop 2 chạy Relay + Victim. Dùng IPv4 LAN thực tế thay cho
+`WINDOWS_IP` và `UBUNTU_IP`, nhưng giữ nguyên port và trình tự trong tài liệu.
+Không dùng `127.0.0.1` giữa hai laptop; nó chỉ là máy cục bộ.
+
 ## 3. Lấy đúng source branch `sontien`
 
 ### 3.1. Windows host đã có project
@@ -54,17 +61,15 @@ git pull --ff-only origin sontien
 git log -1 --oneline
 ```
 
-Commit hiện tại cần thấy là:
-
-```text
-bbebdf2 feat: sync desktop mesh demo and android module
-```
+Hai máy phải hiển thị cùng một commit trước khi build.
 
 ### 3.2. Ubuntu VM chưa có project
 
 Mở Terminal Ubuntu:
 
 ```bash
+sudo apt update
+sudo apt install -y git
 cd ~
 git clone -b sontien https://github.com/Dawtrin/emergency-mesh-desktop.git
 cd ~/emergency-mesh-desktop
@@ -185,6 +190,11 @@ java -version
 ./mvnw clean package
 ```
 
+Nếu máy có nhiều JDK, chọn JDK 21 với `sudo update-alternatives --config java`
+và `sudo update-alternatives --config javac`. Kiểm tra `./mvnw --version` cũng
+phải báo Java 21+. Biến shell/IP và `JAVA_HOME` không tự truyền sang terminal
+mới: đặt lại chúng, đổi về thư mục project trước khi chạy lệnh ở mục 7–9.
+
 Build lại trên Ubuntu là bắt buộc cho node JavaFX Linux. Không lấy JAR đã
 build trên Windows để chạy Ubuntu vì JavaFX đóng gói native library theo hệ
 điều hành.
@@ -229,13 +239,24 @@ Set-NetConnectionProfile `
 ```bash
 sudo ufw status verbose
 sudo ufw allow from "$WINDOWS_IP" to any port 18002 proto tcp
+sudo ufw allow from "$WINDOWS_IP" to any port 18003 proto tcp
 sudo ufw status numbered
 ```
 
 Không cần mở `18001` ra mạng vì Victim bind vào `127.0.0.1` và chỉ Relay trên
 cùng Ubuntu truy cập port đó.
 
+Port `18003` chỉ cần khi chạy Relay-02 ở mục 13.1.
+
 ## 7. Khởi động Base Station trên Windows
+
+Trước khi chạy, sửa `relay.host` trong `config\basestation.properties` thành IP
+Host-only thật của Ubuntu. Có thể chạy ngắn gọn bằng file cấu hình:
+
+```powershell
+java -jar .\target\BaseStationServer-jar-with-dependencies.jar `
+  --config config\basestation.properties
+```
 
 Mở PowerShell mới:
 
@@ -263,6 +284,14 @@ năng; có thể thay bằng MBTiles thật sau.
 
 ## 8. Khởi động Relay trên Ubuntu
 
+Sửa `upstream.host` trong `config/nodeB1.properties` thành IP Host-only thật
+của Windows, sau đó có thể chạy:
+
+```bash
+java -jar ./target/MeshNodeClient-jar-with-dependencies.jar \
+  --config config/nodeB1.properties
+```
+
 Mở Terminal Ubuntu thứ nhất:
 
 ```bash
@@ -285,6 +314,13 @@ Relay phải bind `0.0.0.0` vì Base Station trên Windows kết nối vào Rela
 Host-only network.
 
 ## 9. Khởi động Victim trên Ubuntu
+
+Lệnh ngắn gọn bằng file cấu hình:
+
+```bash
+java -jar ./target/MeshNodeClient-jar-with-dependencies.jar \
+  --config config/nodeA.properties
+```
 
 Mở Terminal Ubuntu thứ hai:
 
@@ -376,7 +412,8 @@ Không xóa database trong lúc đang kiểm tra retry/outbox.
 2. Gửi dispatch.
 3. Kiểm tra log Relay có forward về `127.0.0.1:18001`.
 4. Kiểm tra Victim nhận được dispatch.
-5. Để Victim gửi ACK.
+5. Victim tự gửi ACK giao thức ngay khi tiếp nhận Dispatch hợp lệ; nút xác nhận
+   trên thẻ thông báo chỉ là thao tác xác nhận cục bộ của người dùng.
 6. Kiểm tra Base Station chuyển trạng thái:
 
 ```text
@@ -395,6 +432,27 @@ Sau khi test SOS/ACK thành công:
 3. Quan sát trạng thái retry/waiting hoặc failed, không được crash UI.
 4. Khởi động lại Relay bằng lệnh ở mục 8.
 5. Kiểm tra outbox có thể gửi lại tùy trạng thái packet.
+
+### 13.1. Test Relay B2 và failover tùy chọn
+
+Sau khi luồng một Relay đã PASS, mở thêm terminal Ubuntu và chạy:
+
+```bash
+cd ~/emergency-mesh-desktop
+export WINDOWS_IP='192.168.56.1'
+java -jar ./target/MeshNodeClient-jar-with-dependencies.jar \
+  --config config/nodeB2.properties --next-hop-host "$WINDOWS_IP"
+```
+
+Base Station phải hiển thị cả `RELAY-01` và `RELAY-02`. Tắt relay đang được
+chọn, gửi một Dispatch mới và kiểm tra lần retry tiếp theo chuyển sang relay
+còn online. Dispatch chỉ thành công khi trạng thái cuối cùng là `ACKED`.
+
+Heartbeat gửi mỗi 3 giây; relay được coi offline khi không có heartbeat khoảng
+10 giây (UI có thể trễ thêm chu kỳ refresh). Failover này chỉ áp dụng cho
+Dispatch. Muốn tiếp tục gửi SOS khi B1 tắt, khởi động lại Victim với
+`--config config/nodeA.properties --next-hop-port 18003` hoặc bật lại B1.
+Không diễn giải đây là tự tìm đường radio/Wi-Fi Direct.
 
 ## 14. Dừng toàn bộ ứng dụng
 

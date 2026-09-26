@@ -39,7 +39,7 @@ public final class NodeConfig {
             "--mode", "--id", "--bind-host", "--bind-port", "--port",
             "--next-hop-host", "--next-hop-port", "--next-hop", "--host",
             "--relay-host", "--relay-port", "--victim-id", "--victim-host",
-            "--victim-port", "--map-file");
+            "--victim-port", "--map-file", "--config");
 
     private final NodeMode mode;
     private final String nodeId;
@@ -132,6 +132,15 @@ public final class NodeConfig {
             }
         }
 
+        if (options.containsKey("--config")) {
+            Map<String, String> defaultsFromFile = readProperties(options.remove("--config"));
+            if (options.containsKey("--port")) defaultsFromFile.remove("--bind-port");
+            if (options.containsKey("--host")) defaultsFromFile.remove("--next-hop-host");
+            if (options.containsKey("--next-hop")) defaultsFromFile.remove("--next-hop-port");
+            defaultsFromFile.putAll(options);
+            options = defaultsFromFile;
+        }
+
         NodeMode mode = parseMode(options.getOrDefault("--mode", "VICTIM"));
         Defaults defaults = Defaults.forMode(mode);
 
@@ -160,6 +169,33 @@ public final class NodeConfig {
         return new NodeConfig(mode, nodeId, bindHost, bindPort, nextHopHost,
                 nextHopPort, relayHost, relayPort, victimNodeId, victimHost,
                 victimPort, mapFile);
+    }
+
+    private static Map<String, String> readProperties(String file) {
+        java.util.Properties properties = new java.util.Properties();
+        try (java.io.Reader reader = Files.newBufferedReader(Path.of(file), java.nio.charset.StandardCharsets.UTF_8)) {
+            properties.load(reader);
+        } catch (java.io.IOException e) {
+            throw new IllegalArgumentException("Cannot read --config: " + file, e);
+        }
+        Map<String, String> keys = Map.ofEntries(
+                Map.entry("node.id", "--id"), Map.entry("node.role", "--mode"),
+                Map.entry("bind.host", "--bind-host"), Map.entry("self.port", "--bind-port"),
+                Map.entry("upstream.host", "--next-hop-host"), Map.entry("upstream.port", "--next-hop-port"),
+                Map.entry("relay.host", "--relay-host"), Map.entry("relay.port", "--relay-port"),
+                Map.entry("victim.id", "--victim-id"), Map.entry("victim.host", "--victim-host"),
+                Map.entry("victim.port", "--victim-port"), Map.entry("map.file", "--map-file"));
+        Map<String, String> result = new HashMap<>();
+        for (String key : properties.stringPropertyNames()) {
+            String option = keys.get(key);
+            if (option == null) throw new IllegalArgumentException("Unknown config property: " + key);
+            result.put(option, properties.getProperty(key).trim());
+        }
+        if ("VICTIM".equalsIgnoreCase(properties.getProperty("node.role", "VICTIM"))) {
+            if (result.containsKey("--relay-host")) result.putIfAbsent("--next-hop-host", result.get("--relay-host"));
+            if (result.containsKey("--relay-port")) result.putIfAbsent("--next-hop-port", result.get("--relay-port"));
+        }
+        return result;
     }
 
     private static NodeMode parseMode(String value) {

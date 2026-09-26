@@ -266,6 +266,43 @@ class EndToEndDispatchAckIntegrationTest {
     }
 
     @Test
+    void dispatchAndAckUseBackupRelayWhenVictimsConfiguredRelayIsDown() throws Exception {
+        TestRelayCallback backupCallback = new TestRelayCallback();
+        RoutingEngine backupEngine = new RoutingEngine("RELAY-BACKUP", "127.0.0.1",
+                baseServer.getPort(), backupCallback);
+        SimpleServerListener backupListener = new SimpleServerListener();
+        SocketServer backupServer = new SocketServer("127.0.0.1", 0, backupEngine, backupListener);
+        try {
+            backupServer.start();
+            assertTrue(backupListener.startedLatch.await(5, TimeUnit.SECONDS));
+            backupEngine.setListenPort(backupServer.getPort());
+            backupEngine.recordRoute("NODE-VICTIM-E2E", "127.0.0.1", victimServer.getPort());
+            relayServer.stop();
+            com.rescue.mesh.routing.LoadBalancer balancer = new com.rescue.mesh.routing.LoadBalancer();
+            MeshPacket heartbeat = com.rescue.mesh.util.PacketFactory.createHeartbeat(
+                    "RELAY-BACKUP", backupServer.getPort(), 0, 0);
+            heartbeat.getPayload().getDiscoveryInfo().getAsJsonObject()
+                    .addProperty("victim_id", "NODE-VICTIM-E2E");
+            heartbeat.computeAndSetChecksum(com.rescue.mesh.util.PacketFactory.getGson());
+            assertTrue(balancer.acceptHeartbeat(heartbeat, "127.0.0.1"));
+            outboxService.stop();
+            outboxService = new DispatchOutboxService(storageService, "127.0.0.1",
+                    relayServer.getPort(), MeshPacket.NODE_BASE_STATION,
+                    new com.rescue.mesh.service.RelayDispatchSender(balancer, SocketClient::send));
+            baseCallback.setOutboxService(outboxService);
+            String packetId = outboxService.enqueueDispatch("NODE-VICTIM-E2E", "Use backup", MeshPacket.SEVERITY_HIGH);
+            outboxService.processPendingDispatches();
+            assertTrue(baseCallback.ackLatch.await(5, TimeUnit.SECONDS));
+            assertEquals("ACKED", storageService.findDispatch(packetId).orElseThrow().getDeliveryStatus());
+            assertEquals("RELAY-BACKUP", baseCallback.receivedAcks.getFirst().getSenderHopId());
+            assertEquals(1, victimCallback.receivedDispatches.size());
+        } finally {
+            backupServer.stop();
+            backupEngine.shutdown();
+        }
+    }
+
+    @Test
     @DisplayName("Victim -> Relay -> Base -> Dispatch -> Relay -> Victim -> ACK -> Relay -> Base")
     void testBidirectionalLifecycleOverRealSockets() throws Exception {
         String targetNode = "NODE-VICTIM-E2E";

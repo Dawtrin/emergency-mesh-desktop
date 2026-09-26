@@ -1,5 +1,8 @@
 # MODULE STATUS — EMERGENCY MESH RESCUE
-*Cập nhật sau khi triển khai Phase 5 — chờ Codex nghiệm thu*
+*Tích hợp desktop ngày 27/09/2026 — chưa nghiệm thu giữa hai máy thật.*
+
+Các mốc hoàn thành dưới đây nói về mã nguồn, không phải chứng nhận phần cứng,
+GPS, radio mesh hoặc Windows ↔ Ubuntu. Xem hướng dẫn demo trong `docs/demo/`.
 
 ## TỔNG QUAN TIẾN ĐỘ
 ```
@@ -9,7 +12,8 @@ MODULE 3 (Base Station UI):           ██████████ 100% — HO
 MODULE 4 (SQLite Persistence & Gateway): ██████████ 100% — HOÀN THÀNH (Phase 2)
 MODULE 5 (True Offline Desktop Map):  ██████████ 100% — HOÀN THÀNH (Phase 3)
 MODULE 6 (Desktop LAN Demo Flow):     ██████████ 100% — HOÀN THÀNH (Phase 4)
-MODULE 7 (Desktop Reliability):       ██████████ 100% — ĐÃ TRIỂN KHAI (Phase 5, chưa nghiệm thu)
+MODULE 7 (Desktop Reliability):       ██████████ 100% — ĐÃ TRIỂN KHAI (Phase 5, chưa nghiệm thu LAN thật)
+MODULE 8 (Relay Monitoring/Failover): ██████████ 100% — ĐÃ TÍCH HỢP (cần test Windows ↔ Ubuntu)
 ```
 
 ---
@@ -105,6 +109,8 @@ MODULE 7 (Desktop Reliability):       ██████████ 100% — Đ
 | `demo/DemoProfile.java`, `demo/DemoPreflight.java` | ✅ ĐÃ TRIỂN KHAI | Parse profile/versioned safe preflight checks without changing OS state. |
 | `config/demo-profile.properties`, `scripts/preflight-demo.ps1` | ✅ ĐÃ TRIỂN KHAI | Template LAN không secret và preflight JDK/JAR/port/map/host. |
 | `docs/demo/troubleshooting.md` | ✅ ĐÃ TRIỂN KHAI | Recovery guide, database/outbox persistence, firewall and startup order. |
+| `routing/LoadBalancer.java`, `routing/NodeStatus.java` | ✅ ĐÃ TÍCH HỢP | Relay heartbeat đã xác thực, chọn relay online có tải thấp nhất theo victim route. |
+| `service/RelayDispatchSender.java` | ✅ ĐÃ TÍCH HỢP | Dispatch outbox thử relay phù hợp kế tiếp khi TCP send thất bại; chỉ ACK mới xác nhận giao hàng. |
 
 ---
 
@@ -120,9 +126,9 @@ MODULE 7 (Desktop Reliability):       ██████████ 100% — Đ
 | `RepositoryTest` | 9 | PASS | Phase 2.2 Storage CRUD, idempotency, DB restart |
 | `SocketServerIntegrationTest` | 13 | PASS | Hardened TCP Gateway, dynamic bind, malformed/duplicate/TTL packet handling, overload socket closure, >64KB frame limit |
 | `DispatchOutboxTest` | 13 | PASS | Race-safe monotonic ACKED, synchronous ACK preserve, exponential backoff |
-| `EndToEndDispatchAckIntegrationTest` | 1 | PASS | Phase 4 real bidirectional socket flow: Victim -> Relay -> Base -> Dispatch -> Relay -> Victim -> ACK -> Relay -> Base -> SQLite ACKED |
+| `EndToEndDispatchAckIntegrationTest` | 2 | PASS | Socket SOS/Dispatch/ACK/SQLite và ACK qua relay dự phòng khi upstream Victim đã tắt. |
 | `NodeConfigTest` | 6 | PASS | Phase 4 local/LAN topology parsing and validation of host, ports, duplicate options and map path |
-| `RoutingEngineForwardingTest` | 6 | PASS | Phase 4 exact forwarding mutation, explicit reverse route, checksum/TTL/duplicate/next-hop failures |
+| `RoutingEngineForwardingTest` | 7 | PASS | Forwarding, reverse route, checksum/TTL; duplicate Dispatch tái ACK nhưng không giao UI hai lần. |
 | `BaseStationStorageFailureTest` | 4 | PASS | Phase 2 SQLite init failure halts services, write failure prevents ACK, shutdown race safe & thread-confinement UiDispatcher |
 | `MBTilesReaderTest` | 8 | PASS | Phase 3.3 MBTiles open, metadata, tile query, PNG signature, non-existent, LRU cache eviction, shutdown |
 | `LocalTileServerTest` | 8 | PASS | Phase 3.3 Loopback 127.0.0.1 binding, dynamic port, 200 tile HTTP, 404 transparent PNG, traversal rejection, out-of-bounds rejection, 405 method rejection, graceful shutdown |
@@ -133,4 +139,6 @@ MODULE 7 (Desktop Reliability):       ██████████ 100% — Đ
 | `BaseStationDuplicateAckTest` | 1 | PASS | Duplicate SOS không tạo lại sự kiện UI nhưng Base Station gửi lại ACK sau khi kiểm tra SQLite idempotent thành công |
 | `BaseStationNonSosArrivalTest` | 1 | PASS | HEARTBEAT được lưu để audit nhưng không tạo SOS, không tăng thống kê và không gửi ACK cứu hộ |
 | `BaseStationSeverityStyleTest` | 2 | PASS | Ánh xạ CRITICAL/HIGH/MEDIUM sang CSS triage trên toàn bộ dòng TableView |
-| **TỔNG CỘNG** | **186** | **186/186 PASS (100%)** | **0 failures, 0 errors, 0 skipped** |
+| `LoadBalancerTest`, `NodeConfigPropertiesTest`, `FxmlControllerContractTest` | 5 | PASS | Heartbeat relay có checksum, least-load candidate, file config và FXML/controller contract. |
+| `RelayDispatchSenderTest` | 1 | PASS | Thử relay tiếp theo khi transport lỗi và quay vòng khi retry. |
+| **TỔNG CỘNG** | **194** | **194/194 PASS (100%)** | `clean package` với JDK 21 ngày 27/09/2026; kết quả tại `target/surefire-reports`. |

@@ -304,7 +304,7 @@ public class SocketServer {
 
                 // Trao cho RoutingEngine xử lý (thread-safe, kiểm tra validation, checksum, duplicate)
                 if (routingEngine != null) {
-                    routingEngine.processPacket(packet);
+                    routingEngine.processPacket(packet, clientSocket.getInetAddress().getHostAddress());
                 }
             }
 

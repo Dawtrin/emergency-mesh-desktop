@@ -14,6 +14,7 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
@@ -26,6 +27,9 @@ import java.util.ResourceBundle;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * JavaFX Controller cho Node Giả Lập (Victim / Relay).
@@ -62,6 +66,15 @@ public class NodeClientController implements Initializable,
     @FXML private VBox sosFormContainer;
     @FXML private VBox dispatchCard;
     @FXML private Label lblDispatchContent;
+    @FXML private Button btnAckDispatch;
+    @FXML private VBox relayDashboardContainer;
+    @FXML private Label lblRelayUpstreamStatus;
+    @FXML private Label lblRelayUpstreamDetail;
+    @FXML private Label lblRelayPacketsRelayed;
+    @FXML private Label lblRelayCurrentLoad;
+    @FXML private ProgressBar relayLoadBar;
+    @FXML private Label lblRelayHeartbeat;
+    @FXML private Label lblRelayHeartbeatInterval;
     @FXML private TextField txtSenderName;
     @FXML private ComboBox<String> cboAlertType;
     @FXML private ComboBox<String> cboSeverity;
@@ -82,6 +95,8 @@ public class NodeClientController implements Initializable,
     private RoutingEngine routingEngine;
     private SocketServer socketServer;
     private ReconnectablePacketSender peerSender;
+    private ScheduledExecutorService relayHeartbeatScheduler;
+    private final AtomicInteger relayedPackets = new AtomicInteger();
     /** Bounded daemon work queue: rapid button presses cannot create unlimited threads. */
     private final ThreadPoolExecutor networkActions = new ThreadPoolExecutor(
             1, 1, 30, TimeUnit.SECONDS, new ArrayBlockingQueue<>(16), runnable -> {
@@ -159,6 +174,13 @@ public class NodeClientController implements Initializable,
         if (config.getMode() == NodeConfig.NodeMode.RELAY) {
             sosFormContainer.setVisible(false);
             sosFormContainer.setManaged(false);
+            if (relayDashboardContainer != null) {
+                relayDashboardContainer.setVisible(true);
+                relayDashboardContainer.setManaged(true);
+            }
+            if (lblRelayUpstreamDetail != null) {
+                lblRelayUpstreamDetail.setText(config.getNextHopHost() + ":" + config.getNextHopPort());
+            }
             appendLog("[INFO] Chế độ RELAY — tự động chuyển tiếp gói tin.");
         }
 
@@ -194,7 +216,11 @@ public class NodeClientController implements Initializable,
                     this  // NodeClientController implements ServerEventListener
             );
             socketServer.start();
+            routingEngine.setListenPort(socketServer.getPort());
             appendLog("[INFO] Node " + config.getNodeId() + " đang khởi tạo...");
+            if (config.getMode() == NodeConfig.NodeMode.RELAY) {
+                startRelayHeartbeat();
+            }
         } catch (IllegalStateException e) {
             // Port conflict/bind failure must leave an actionable UI instead of
             // failing the JavaFX startup with an opaque exception.
@@ -313,6 +339,43 @@ public class NodeClientController implements Initializable,
         submitNetworkAction(heartbeat, "heartbeat");
     }
 
+    @FXML
+    private void onAcknowledgeDispatch() {
+        if (dispatchCard != null) {
+            dispatchCard.setVisible(false);
+            dispatchCard.setManaged(false);
+        }
+        appendLog("[ACK] Lệnh đã được xác nhận trên giao diện; ACK mạng đã gửi tự động khi nhận lệnh.");
+    }
+
+    private void startRelayHeartbeat() {
+        relayHeartbeatScheduler = Executors.newSingleThreadScheduledExecutor(runnable -> {
+            Thread thread = new Thread(runnable, "Relay-Heartbeat-" + config.getNodeId());
+            thread.setDaemon(true);
+            return thread;
+        });
+        relayHeartbeatScheduler.scheduleAtFixedRate(() -> {
+            if (routingEngine == null) return;
+            int load = routingEngine.getActiveSends();
+            MeshPacket heartbeat = PacketFactory.createHeartbeat(config.getNodeId(),
+                    config.getListenPort(), load, routingEngine.getCompletedSends());
+            heartbeat.getPayload().getDiscoveryInfo().getAsJsonObject().addProperty("victim_id", config.getVictimNodeId());
+            heartbeat.computeAndSetChecksum(PacketFactory.getGson());
+            boolean sent = com.rescue.mesh.network.SocketClient.send(config.getNextHopHost(), config.getNextHopPort(), heartbeat);
+            Platform.runLater(() -> {
+                updateRelayDashboard(load);
+                if (lblRelayUpstreamStatus != null) lblRelayUpstreamStatus.setText(sent ? "TCP SENT (không phải ACK)" : "DISCONNECTED");
+            });
+        }, 1, 3, TimeUnit.SECONDS);
+    }
+
+    private void updateRelayDashboard(int load) {
+        if (lblRelayCurrentLoad != null) lblRelayCurrentLoad.setText(Integer.toString(load));
+        if (lblRelayPacketsRelayed != null) lblRelayPacketsRelayed.setText(Integer.toString(relayedPackets.get()));
+        if (relayLoadBar != null) relayLoadBar.setProgress(Math.min(1.0, load / 10.0));
+        if (lblRelayHeartbeat != null) lblRelayHeartbeat.setText(new SimpleDateFormat("HH:mm:ss").format(new Date()));
+    }
+
     // =========================================================
     // ROUTING CALLBACK — Nhận sự kiện từ RoutingEngine
     // =========================================================
@@ -340,6 +403,10 @@ public class NodeClientController implements Initializable,
 
     @Override
     public void onPacketRelayed(MeshPacket packet, int nextHop) {
+        if (config != null && config.getMode() == NodeConfig.NodeMode.RELAY
+                && !MeshPacket.TYPE_HEARTBEAT.equals(packet.getPacketType())) {
+            relayedPackets.incrementAndGet();
+        }
         Platform.runLater(() -> {
             String lifecycle = MeshPacket.TYPE_DISPATCH_COMMAND.equals(packet.getPacketType())
                     || MeshPacket.TYPE_DISPATCH_CMD.equals(packet.getPacketType())
@@ -479,6 +546,9 @@ public class NodeClientController implements Initializable,
      */
     public void shutdown() {
         networkActions.shutdownNow();
+        if (relayHeartbeatScheduler != null) {
+            relayHeartbeatScheduler.shutdownNow();
+        }
         if (peerSender != null) {
             peerSender.close();
         }

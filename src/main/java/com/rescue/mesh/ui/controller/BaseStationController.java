@@ -7,6 +7,9 @@ import com.rescue.mesh.network.NodeConfig;
 import com.rescue.mesh.network.SocketClient;
 import com.rescue.mesh.network.SocketServer;
 import com.rescue.mesh.routing.RoutingEngine;
+import com.rescue.mesh.routing.LoadBalancer;
+import com.rescue.mesh.routing.NodeStatus;
+import com.rescue.mesh.service.RelayDispatchSender;
 import com.rescue.mesh.service.DispatchOutboxService;
 import com.rescue.mesh.storage.BaseStationStorageService;
 import com.rescue.mesh.storage.DatabaseConfig;
@@ -42,6 +45,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -49,6 +53,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -88,6 +93,16 @@ public class BaseStationController implements Initializable,
     @FXML private Label lblHigh;
     @FXML private Label lblMedium;
     @FXML private Label lblCacheSize;
+    @FXML private Label lblMeshStatus;
+    @FXML private Label lblOnlineNodes;
+    @FXML private Label lblDistribution;
+    @FXML private Label lblNodeStatusList;
+    @FXML private Label lblVictimDetailSeverity;
+    @FXML private Label lblVictimDetailName;
+    @FXML private Label lblVictimDetailMessage;
+    @FXML private Label lblVictimDetailRoute;
+    @FXML private Label lblVictimDetailCoords;
+    @FXML private javafx.scene.layout.VBox victimDetailCard;
 
     @FXML private TableView<VictimTableRow> tblVictims;
     @FXML private TableColumn<VictimTableRow, String> colStt;
@@ -119,6 +134,9 @@ public class BaseStationController implements Initializable,
     private MapScriptBridge mapScriptBridge;
     private BaseStationStorageService storageService;
     private DispatchOutboxService dispatchOutboxService;
+    private final LoadBalancer loadBalancer = new LoadBalancer();
+    private final RelayDispatchSender relayDispatchSender = new RelayDispatchSender(loadBalancer, SocketClient::send);
+    private ScheduledExecutorService monitoringExecutor;
 
     /** Danh sách nạn nhân — ObservableList bind vào TableView */
     private final ObservableList<VictimTableRow> victimData = FXCollections.observableArrayList();
@@ -281,6 +299,8 @@ public class BaseStationController implements Initializable,
         tblVictims.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null && newVal.getMarkerId() != null) {
                 focusMarkerOnMap(newVal.getMarkerId());
+                cboTargetNode.setValue(newVal.getSourceNode());
+                showVictimDetails(newVal);
             }
         });
 
@@ -463,7 +483,7 @@ public class BaseStationController implements Initializable,
                 relayHost,
                 relayNodePort,
                 config.getNodeId(),
-                (h, p, pkt) -> SocketClient.send(h, p, pkt)
+                relayDispatchSender
             );
             this.dispatchOutboxService.start(2000);
             appendLog("[INFO] Dispatch Outbox Service đã khởi động (chu kỳ 2s, đích: " + relayHost + ":" + relayNodePort + ").");
@@ -487,6 +507,7 @@ public class BaseStationController implements Initializable,
         );
 
         // Khởi động SocketServer
+        routingEngine.setBaseStation(true);
         try {
             socketServer = new SocketServer(
                     config.getBindHost(),
@@ -495,6 +516,7 @@ public class BaseStationController implements Initializable,
                     this  // implements ServerEventListener
             );
             socketServer.start();
+            startRelayMonitoring();
             appendLog("[INFO] Base Station Server đang lắng nghe tại "
                     + config.getBindHost() + ":" + config.getListenPort() + "...");
         } catch (Exception e) {
@@ -824,7 +846,9 @@ public class BaseStationController implements Initializable,
                 packet.getPacketId(),
                 packet.getSourceNodeId()
         );
-        ackSender.sendAck(relayHost, relayNodePort, ackPacket);
+        NodeStatus ingress = loadBalancer.getNodeStatus(packet.getSenderHopId());
+        ackSender.sendAck(ingress != null ? ingress.ipAddress() : relayHost,
+                ingress != null ? ingress.port() : relayNodePort, ackPacket);
     }
 
     @Override
@@ -862,6 +886,7 @@ public class BaseStationController implements Initializable,
                 ? packet.getPayload().getAckForPacketId() : null;
         runOnUiThread(() -> {
             if (accepted) {
+                relayDispatchSender.acknowledged(ackFor);
                 appendLog("[ACKED] Dispatch " + shortId(ackFor)
                         + " đã được victim xác nhận hợp lệ.");
             } else {
@@ -881,6 +906,13 @@ public class BaseStationController implements Initializable,
             appendLog("[INFO] Base Station Server tại port " + port + " — OK");
             setServerStatus("Đang lắng nghe — Port " + port, "connected");
         });
+    }
+
+    @Override
+    public void onRelayHeartbeat(MeshPacket packet, String remoteHost) {
+        if (!isShuttingDownOrStopped() && loadBalancer.acceptHeartbeat(packet, remoteHost)) {
+            runOnUiThread(this::refreshRelayMonitoring);
+        }
     }
 
     @Override
@@ -1249,6 +1281,7 @@ public class BaseStationController implements Initializable,
             if (dispatchOutboxService != null) {
                 dispatchOutboxService.stop();
             }
+            if (monitoringExecutor != null) monitoringExecutor.shutdownNow();
             if (backgroundStorageExecutor != null) {
                 backgroundStorageExecutor.shutdown();
                 try {
@@ -1269,6 +1302,51 @@ public class BaseStationController implements Initializable,
         } finally {
             lifecycleState.set(LifecycleState.STOPPED);
         }
+    }
+
+    private void startRelayMonitoring() {
+        if (monitoringExecutor != null || isShuttingDownOrStopped()) return;
+        monitoringExecutor = Executors.newSingleThreadScheduledExecutor(runnable -> {
+            Thread thread = new Thread(runnable, "Base-Relay-Monitoring");
+            thread.setDaemon(true);
+            return thread;
+        });
+        monitoringExecutor.scheduleWithFixedDelay(() -> runOnUiThread(() -> {
+            if (!isShuttingDownOrStopped()) refreshRelayMonitoring();
+        }), 0, 2, TimeUnit.SECONDS);
+    }
+
+    private void refreshRelayMonitoring() {
+        int online = loadBalancer.getOnlineCount();
+        if (lblOnlineNodes != null) lblOnlineNodes.setText(online + "/" + loadBalancer.getTotalCount());
+        if (lblMeshStatus != null) lblMeshStatus.setText(online > 0 ? "● RELAY ONLINE" : "● WAITING FOR RELAY");
+        if (lblNodeStatusList != null) {
+            StringBuilder status = new StringBuilder();
+            for (NodeStatus relay : loadBalancer.getRoutingTable().values()) {
+                status.append(relay.nodeId()).append(relay.isOnline() ? " ONLINE" : " OFFLINE")
+                        .append(" | ").append(relay.ipAddress()).append(':').append(relay.port())
+                        .append(" | load ").append(relay.currentLoad())
+                        .append(" | ").append(relay.getSecondsSinceLastHeartbeat()).append("s\n");
+            }
+            lblNodeStatusList.setText(status.isEmpty() ? "Đang chờ relay heartbeat..." : status.toString().trim());
+        }
+        if (lblDistribution != null) {
+            StringBuilder distribution = new StringBuilder();
+            loadBalancer.getDistributionStats().forEach((id, percent) ->
+                    distribution.append(id).append(": ").append(String.format("%.0f%%", percent)).append("  "));
+            lblDistribution.setText(distribution.isEmpty() ? "Đang thu thập..." : distribution.toString().trim());
+        }
+    }
+
+    private void showVictimDetails(VictimTableRow row) {
+        if (victimDetailCard == null) return;
+        victimDetailCard.setVisible(true);
+        victimDetailCard.setManaged(true);
+        if (lblVictimDetailSeverity != null) lblVictimDetailSeverity.setText(row.getSeverity());
+        if (lblVictimDetailName != null) lblVictimDetailName.setText(row.getSourceNode());
+        if (lblVictimDetailMessage != null) lblVictimDetailMessage.setText(row.getMessage());
+        if (lblVictimDetailRoute != null) lblVictimDetailRoute.setText(row.getRouteHistory());
+        if (lblVictimDetailCoords != null) lblVictimDetailCoords.setText(row.getCoordinates());
     }
 
     private void cleanupDatabaseIfShuttingDown() {

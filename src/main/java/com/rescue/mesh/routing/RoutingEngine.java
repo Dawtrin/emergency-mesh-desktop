@@ -26,6 +26,7 @@ public class RoutingEngine {
         void onForwardError(int nextHop, String errorMessage);
         void onDispatchReceived(MeshPacket packet);
         default void onAckReceived(MeshPacket packet) {}
+        default void onRelayHeartbeat(MeshPacket packet, String remoteHost) {}
     }
 
     @FunctionalInterface
@@ -58,6 +59,15 @@ public class RoutingEngine {
     private final PacketSender packetSender;
     private final Gson gson;
     private final Map<String, RouteEndpoint> destinationRoutes = new ConcurrentHashMap<>();
+    private volatile boolean baseStation;
+    private volatile int listenPort;
+    private final java.util.concurrent.atomic.AtomicInteger activeSends = new java.util.concurrent.atomic.AtomicInteger();
+    private final java.util.concurrent.atomic.AtomicInteger completedSends = new java.util.concurrent.atomic.AtomicInteger();
+
+    public int getActiveSends() { return activeSends.get(); }
+    public int getCompletedSends() { return completedSends.get(); }
+    public void setBaseStation(boolean value) { baseStation = value; }
+    public void setListenPort(int value) { listenPort = value; }
 
     public RoutingEngine(String myNodeId,
                          String nextHopHost,
@@ -111,6 +121,10 @@ public class RoutingEngine {
     }
 
     public void processPacket(MeshPacket packet) {
+        processPacket(packet, null);
+    }
+
+    public void processPacket(MeshPacket packet, String remoteHost) {
         if (packet == null) {
             callback.onPacketDropped("UNKNOWN", "PARSE_ERROR: packet is null");
             return;
@@ -134,7 +148,22 @@ public class RoutingEngine {
                 return;
             }
 
+            if (isDestination(packet) && MeshPacket.TYPE_DISPATCH_COMMAND.equals(packet.getPacketType())
+                    && remoteHost != null && packet.getPayload().getDiscoveryInfo() != null
+                    && packet.getPayload().getDiscoveryInfo().isJsonObject()) {
+                com.google.gson.JsonObject reply = packet.getPayload().getDiscoveryInfo().getAsJsonObject();
+                if (reply.has("reply_port")) {
+                    int port = reply.get("reply_port").getAsBigDecimal().intValueExact();
+                    recordRoute(packet.getSourceNodeId(), remoteHost, port);
+                }
+            }
+
             if (seenPacketCache.checkAndMark(packetId)) {
+                if (MeshPacket.TYPE_DISPATCH_COMMAND.equals(packet.getPacketType())) {
+                    if (isDestination(packet)) sendAckForDispatch(packet);
+                    else forwardPacket(packet);
+                    return;
+                }
                 drop(packetId, "DUPLICATE");
                 return;
             }
@@ -149,7 +178,12 @@ public class RoutingEngine {
                 case MeshPacket.TYPE_SOS_BROADCAST, MeshPacket.TYPE_SOS_DATA -> processSosPacket(packet);
                 case MeshPacket.TYPE_DISPATCH_COMMAND, MeshPacket.TYPE_DISPATCH_CMD -> processDispatchPacket(packet);
                 case MeshPacket.TYPE_ACK -> processAckPacket(packet);
-                case MeshPacket.TYPE_HEARTBEAT -> processHeartbeat(packet);
+                case MeshPacket.TYPE_HEARTBEAT -> {
+                    if (isDestination(packet) && remoteHost != null) {
+                        callback.onRelayHeartbeat(packet, remoteHost);
+                    }
+                    processHeartbeat(packet);
+                }
                 case MeshPacket.TYPE_ROUTE_DISCOVERY -> {
                     if (isDestination(packet)) {
                         callback.onPacketArrived(packet);
@@ -198,21 +232,23 @@ public class RoutingEngine {
     }
 
     private boolean isDestination(MeshPacket packet) {
-        return myNodeId.equals(packet.getDestinationNodeId());
+        return myNodeId.equals(packet.getDestinationNodeId())
+                || (baseStation && MeshPacket.NODE_BASE_STATION.equals(packet.getDestinationNodeId()));
     }
 
     private void sendAckForDispatch(MeshPacket dispatchPacket) {
-        if (upstreamEndpoint == null) {
-            drop(dispatchPacket.getPacketId(), "NO_NEXT_HOP_FOR_ACK");
-            return;
-        }
         String ackDestination = dispatchPacket.getSourceNodeId();
         if (ackDestination == null || ackDestination.isBlank()) {
             drop(dispatchPacket.getPacketId(), "MISSING_ACK_DESTINATION");
             return;
         }
+        RouteEndpoint learned = destinationRoutes.get(ackDestination);
+        if (learned == null && upstreamEndpoint == null) {
+            drop(dispatchPacket.getPacketId(), "NO_NEXT_HOP_FOR_ACK");
+            return;
+        }
         MeshPacket ack = PacketFactory.createAck(myNodeId, dispatchPacket.getPacketId(), ackDestination);
-        sendUnmodified(ack, upstreamEndpoint);
+        sendUnmodified(ack, learned != null ? learned : upstreamEndpoint);
     }
 
     /**
@@ -242,6 +278,14 @@ public class RoutingEngine {
         forwarded.setHopCount(forwarded.getHopCount() + 1);
         forwarded.addToRouteHistory(myNodeId);
         forwarded.setSenderHopId(myNodeId);
+        if (listenPort > 0 && MeshPacket.TYPE_DISPATCH_COMMAND.equals(forwarded.getPacketType())) {
+            com.google.gson.JsonObject reply = forwarded.getPayload().getDiscoveryInfo() != null
+                    && forwarded.getPayload().getDiscoveryInfo().isJsonObject()
+                    ? forwarded.getPayload().getDiscoveryInfo().getAsJsonObject().deepCopy()
+                    : new com.google.gson.JsonObject();
+            reply.addProperty("reply_port", listenPort);
+            forwarded.getPayload().setDiscoveryInfo(reply);
+        }
         forwarded.computeAndSetChecksum(gson);
 
         send(forwarded, target);
@@ -266,13 +310,17 @@ public class RoutingEngine {
     private void send(MeshPacket packet, RouteEndpoint target) {
         logTransport(packet, target, "FORWARDING");
         boolean sent;
+        activeSends.incrementAndGet();
         try {
             sent = packetSender.send(target.host(), target.port(), packet);
         } catch (RuntimeException e) {
             callback.onForwardError(target.port(), target + ": " + safeMessage(e));
             return;
+        } finally {
+            activeSends.decrementAndGet();
         }
         if (sent) {
+            completedSends.incrementAndGet();
             logTransport(packet, target, MeshPacket.TYPE_DISPATCH_COMMAND.equals(packet.getPacketType())
                     || MeshPacket.TYPE_DISPATCH_CMD.equals(packet.getPacketType()) ? "WAITING_FOR_ACK" : "SENT");
             callback.onPacketRelayed(packet, target.port());
