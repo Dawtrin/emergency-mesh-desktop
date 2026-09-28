@@ -1,6 +1,11 @@
 param(
+    [Alias('RelayIp')]
     [string]$UbuntuIp,
-    [switch]$Rebuild
+    [switch]$Rebuild,
+    [ValidateRange(1, 65535)]
+    [int]$ListenPort = 18888,
+    [ValidateRange(1, 65535)]
+    [int]$RelayPort = 18002
 )
 
 $ErrorActionPreference = 'Stop'
@@ -10,7 +15,7 @@ $map = Join-Path $projectRoot 'src\test\resources\fixtures\test-tiles.mbtiles'
 $config = Join-Path $projectRoot 'config\basestation.properties'
 
 if ([string]::IsNullOrWhiteSpace($UbuntuIp)) {
-    $UbuntuIp = Read-Host 'Nhap IPv4 Host-only cua Ubuntu VM (vi du 192.168.56.101)'
+    $UbuntuIp = Read-Host 'Nhap IPv4 cua may chay RELAY (Wi-Fi/LAN hoac Ubuntu Host-only)'
 }
 
 $parsedIp = $null
@@ -18,7 +23,7 @@ if (-not [System.Net.IPAddress]::TryParse($UbuntuIp, [ref]$parsedIp) -or
     $parsedIp.AddressFamily -ne [System.Net.Sockets.AddressFamily]::InterNetwork -or
     [System.Net.IPAddress]::IsLoopback($parsedIp) -or
     $parsedIp.GetAddressBytes()[0] -eq 0 -or $parsedIp.GetAddressBytes()[0] -ge 224) {
-    throw "UbuntuIp khong phai IPv4 hop le: $UbuntuIp"
+    throw "IP Relay khong phai IPv4 peer hop le: $UbuntuIp"
 }
 
 $currentJava = if ($env:JAVA_HOME) { Join-Path $env:JAVA_HOME 'bin\java.exe' } else { '' }
@@ -57,13 +62,18 @@ if ($Rebuild -or -not (Test-Path $jar)) {
     }
 }
 
-Write-Host "Base Station: 0.0.0.0:18888" -ForegroundColor Green
-Write-Host "Relay Ubuntu: $UbuntuIp`:18002" -ForegroundColor Green
+Write-Host "Java: $javaVersion" -ForegroundColor Green
+Write-Host "Base Station: 0.0.0.0:$ListenPort" -ForegroundColor Green
+Write-Host "Relay: $UbuntuIp`:$RelayPort" -ForegroundColor Green
+Write-Host "Firewall: chi cho phep TCP $ListenPort tu IP Relay; khong tat firewall." -ForegroundColor Yellow
 Write-Host 'Dong cua so JavaFX hoac nhan Ctrl+C de dung.' -ForegroundColor Yellow
 
 & java -jar $jar `
     --config $config `
+    --bind-host 0.0.0.0 `
+    --bind-port $ListenPort `
     --relay-host $UbuntuIp `
+    --relay-port $RelayPort `
     --map-file $map
 
 if ($LASTEXITCODE -ne 0) {

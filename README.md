@@ -16,6 +16,12 @@ Dispatch và failover; SOS của Victim vẫn dùng upstream cấu hình cố đ
 
 ### Khởi động nhanh hai máy
 
+`CHAY_LAPTOP_BASE_STATION.bat` ở thư mục gốc dùng launcher chọn JDK 21+,
+hỏi IPv4 Relay và giữ bộ port của các batch laptop: Base `8888`, Relay `8002`.
+Đây là bộ port khác với hướng dẫn VM bên dưới (`18888`/`18002`); phải cấu hình
+firewall cùng bộ port. Bộ batch laptop tự chọn JDK 21+, bind LAN và hỏi IP:
+Base hỏi Relay; Relay hỏi Base rồi Victim; Victim hỏi Relay.
+
 Windows: double-click `scripts\windows\START_BASE.cmd`, sau đó nhập IP Ubuntu.
 Lần đầu, mở PowerShell Administrator và chạy:
 
