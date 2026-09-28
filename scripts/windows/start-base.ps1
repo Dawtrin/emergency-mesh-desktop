@@ -29,14 +29,24 @@ if (-not [System.Net.IPAddress]::TryParse($UbuntuIp, [ref]$parsedIp) -or
 $currentJava = if ($env:JAVA_HOME) { Join-Path $env:JAVA_HOME 'bin\java.exe' } else { '' }
 $currentVersion = if ($currentJava -and (Test-Path $currentJava)) { (& $currentJava --version | Select-Object -First 1) -join '' } else { '' }
 if ($currentVersion -notmatch '^(?:openjdk|java) (?<major>\d+)' -or [int]$Matches.major -lt 21) {
-    $candidate = Get-ChildItem (Join-Path $HOME '.jdks') -Directory -ErrorAction SilentlyContinue |
-        ForEach-Object {
-            $java = Join-Path $_.FullName 'bin\java.exe'
-            $line = if (Test-Path $java) { (& $java --version | Select-Object -First 1) -join '' } else { '' }
-            if ($line -match '^(?:openjdk|java) (?<major>\d+)' -and [int]$Matches.major -ge 21) {
-                [PSCustomObject]@{ Home = $_.FullName; Major = [int]$Matches.major }
+    $jdkRoots = @(
+        (Join-Path $HOME '.jdks'),
+        'C:\Program Files\Microsoft',
+        'C:\Program Files\Eclipse Adoptium',
+        'C:\Program Files\Java'
+    )
+    $candidates = foreach ($jdkRoot in $jdkRoots) {
+        if (Test-Path $jdkRoot) {
+            Get-ChildItem $jdkRoot -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+                $java = Join-Path $_.FullName 'bin\java.exe'
+                $line = if (Test-Path $java) { (& $java --version | Select-Object -First 1) -join '' } else { '' }
+                if ($line -match '^(?:openjdk|java) (?<major>\d+)' -and [int]$Matches.major -ge 21) {
+                    [PSCustomObject]@{ Home = $_.FullName; Major = [int]$Matches.major }
+                }
             }
-        } | Sort-Object Major | Select-Object -First 1
+        }
+    }
+    $candidate = $candidates | Sort-Object Major | Select-Object -First 1
     if ($candidate) {
         $env:JAVA_HOME = $candidate.Home
     }
