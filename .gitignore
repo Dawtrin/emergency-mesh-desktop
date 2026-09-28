@@ -35,6 +35,10 @@ android-app/app/build/
 !scripts/windows/*.cmd
 !scripts/ubuntu/*.sh
 !android-app/gradlew.bat
+!CHAY_LAPTOP_BASE_STATION.bat
+!CHAY_LAPTOP_RELAY.bat
+!CHAY_LAPTOP_RELAY_B2.bat
+!CHAY_LAPTOP_VICTIM.bat
 
 # Local documentation files (not pushed to Git repository)
 src/DEFENSE_GUIDE.md
