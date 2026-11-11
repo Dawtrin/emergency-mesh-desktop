@@ -27,11 +27,13 @@ public class C2ControllerService {
     private final PacketDao packetDao;
     private final DispatchDao dispatchDao;
     private final RelayNodeDao relayNodeDao;
+    private final DatabaseManager dbManager;
 
     /** Danh sách incident đang hoạt động — cache in-memory cho hiệu năng UI */
     private final CopyOnWriteArrayList<VictimEntity> activeIncidents = new CopyOnWriteArrayList<>();
 
     public C2ControllerService(DatabaseManager dbManager) {
+        this.dbManager = dbManager;
         this.victimDao = new VictimDao(dbManager);
         this.packetDao = new PacketDao(dbManager);
         this.dispatchDao = new DispatchDao(dbManager);
@@ -100,6 +102,19 @@ public class C2ControllerService {
         }
 
         System.out.println("[C2] Victim tạo mới: " + entity);
+
+        // 6. Ghi vết sự kiện dòng thời gian Dossier Timeline (Append-Only)
+        dbManager.getIncidentEventDao().record(
+                entity.getNodeId(),
+                1,
+                "SOS_RECEIVED",
+                entity.getFullName(),
+                entity.getMedicalNotes(),
+                entity.getLatitude(),
+                entity.getLongitude(),
+                false
+        );
+
         return entity;
     }
 
@@ -124,6 +139,12 @@ public class C2ControllerService {
 
         // 2. Cập nhật DB
         victimDao.updateStatus(targetNodeId, "DISPATCHED");
+
+        // Ghi nhận sự kiện Timeline
+        dbManager.getIncidentEventDao().record(
+                targetNodeId, 1, "DISPATCH_SENT", senderName,
+                commandMessage, null, null, false
+        );
 
         // 3. Cập nhật in-memory
         for (VictimEntity entity : activeIncidents) {
@@ -150,6 +171,12 @@ public class C2ControllerService {
      */
     public void resolveIncident(String nodeId) {
         victimDao.updateStatus(nodeId, "RESOLVED");
+
+        // Ghi nhận sự kiện Timeline
+        dbManager.getIncidentEventDao().record(
+                nodeId, 1, "RESOLVED", "Chỉ Huy Trưởng C2",
+                "Ca cứu nạn hoàn tất thành công", null, null, false
+        );
 
         for (VictimEntity entity : activeIncidents) {
             if (entity.getNodeId().equals(nodeId)) {

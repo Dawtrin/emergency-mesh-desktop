@@ -134,6 +134,23 @@ public class DatabaseManager {
         return dataSource.getConnection();
     }
 
+    private UserDao userDao;
+    private IncidentEventDao incidentEventDao;
+
+    public synchronized UserDao getUserDao() {
+        if (userDao == null) {
+            userDao = new UserDao(this);
+        }
+        return userDao;
+    }
+
+    public synchronized IncidentEventDao getIncidentEventDao() {
+        if (incidentEventDao == null) {
+            incidentEventDao = new IncidentEventDao(this);
+        }
+        return incidentEventDao;
+    }
+
     // =========================================================
     // WRITE QUEUE (§5.2 — Serialize SQLite writes)
     // =========================================================
@@ -328,6 +345,54 @@ public class DatabaseManager {
                     last_update_timestamp INTEGER NOT NULL
                 )
             """);
+
+            // 9. Bảng quản lý Cán bộ & Người dùng Hệ thống C2 (RBAC Security)
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    display_name TEXT NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    role TEXT NOT NULL,
+                    active INTEGER NOT NULL DEFAULT 1,
+                    failed_logins INTEGER NOT NULL DEFAULT 0,
+                    locked_until INTEGER,
+                    must_change_password INTEGER NOT NULL DEFAULT 0,
+                    last_login_at INTEGER,
+                    created_at INTEGER NOT NULL
+                )
+            """);
+
+            // 10. Bảng sự kiện cứu nạn (Append-Only Incident Events & Timeline Dossier)
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS incident_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    victim_node_id TEXT NOT NULL,
+                    episode INTEGER NOT NULL DEFAULT 1,
+                    event_type TEXT NOT NULL,
+                    actor TEXT,
+                    detail TEXT,
+                    lat REAL,
+                    lng REAL,
+                    is_drill INTEGER NOT NULL DEFAULT 0,
+                    created_at INTEGER NOT NULL
+                )
+            """);
+
+            // Migration thêm is_drill cho các bảng tác chiến
+            String[] drillMigrations = {
+                "ALTER TABLE victims ADD COLUMN is_drill INTEGER NOT NULL DEFAULT 0",
+                "ALTER TABLE victims ADD COLUMN episode INTEGER NOT NULL DEFAULT 1",
+                "ALTER TABLE dispatch_logs ADD COLUMN is_drill INTEGER NOT NULL DEFAULT 0",
+                "ALTER TABLE interagency_dispatches ADD COLUMN is_drill INTEGER NOT NULL DEFAULT 0",
+                "ALTER TABLE mesh_packets ADD COLUMN is_drill INTEGER NOT NULL DEFAULT 0"
+            };
+            for (String mig : drillMigrations) {
+                try { stmt.execute(mig); } catch (SQLException ignored) {}
+            }
+
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_events_victim ON incident_events(victim_node_id, episode, created_at)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)");
 
             // Indexes cho truy vấn siêu tốc
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_victims_status ON victims(status)");
