@@ -26,6 +26,19 @@ public class ReportApiController {
     }
 
     /**
+     * Xuất dữ liệu nạn nhân chuẩn GeoJSON (Phục vụ phần mềm bản đồ GIS / ATAK).
+     */
+    @GetMapping(value = "/geojson", produces = "application/geo+json; charset=UTF-8")
+    public ResponseEntity<String> exportGeoJson() {
+        String geojson = reportService.exportGeoJson();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentDisposition(ContentDisposition.attachment()
+                .filename("Rescue_Incidents_" + System.currentTimeMillis() + ".geojson")
+                .build());
+        return new ResponseEntity<>(geojson, headers, HttpStatus.OK);
+    }
+
+    /**
      * Xuất báo cáo IAP — FINAL spec: GET /api/reports/iap?format=pdf|csv
      * format=csv  → download file CSV
      * format=pdf  → download text report (PDF engine quá nặng cho offline, dùng text thay thế)

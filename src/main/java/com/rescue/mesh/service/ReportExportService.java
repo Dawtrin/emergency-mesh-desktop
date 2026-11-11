@@ -36,8 +36,40 @@ public class ReportExportService {
     }
 
     /**
-     * Xây dựng Audit Trail — tổng hợp từ tất cả bảng, sắp xếp theo timestamp.
+     * Xuất dữ liệu bản đồ dạng GeoJSON FeatureCollection (chuẩn GIS quốc tế).
      */
+    public String exportGeoJson() {
+        List<VictimDao.VictimRecord> victims = victimDao.findAll();
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\n  \"type\": \"FeatureCollection\",\n  \"features\": [\n");
+
+        for (int i = 0; i < victims.size(); i++) {
+            VictimDao.VictimRecord v = victims.get(i);
+            sb.append("    {\n");
+            sb.append("      \"type\": \"Feature\",\n");
+            sb.append("      \"geometry\": {\n");
+            sb.append("        \"type\": \"Point\",\n");
+            sb.append("        \"coordinates\": [").append(v.longitude()).append(", ").append(v.latitude()).append("]\n");
+            sb.append("      },\n");
+            sb.append("      \"properties\": {\n");
+            sb.append("        \"nodeId\": \"").append(escapeJson(v.nodeId())).append("\",\n");
+            sb.append("        \"fullName\": \"").append(escapeJson(v.fullName())).append("\",\n");
+            sb.append("        \"alertType\": \"").append(escapeJson(v.alertType())).append("\",\n");
+            sb.append("        \"severity\": \"").append(escapeJson(v.severity())).append("\",\n");
+            sb.append("        \"status\": \"").append(escapeJson(v.status())).append("\",\n");
+            sb.append("        \"victimCount\": ").append(v.victimCount()).append(",\n");
+            sb.append("        \"bloodType\": \"").append(escapeJson(v.bloodType())).append("\"\n");
+            sb.append("      }\n");
+            sb.append("    }").append(i < victims.size() - 1 ? "," : "").append("\n");
+        }
+        sb.append("  ]\n}");
+        return sb.toString();
+    }
+
+    private String escapeJson(String str) {
+        if (str == null) return "";
+        return str.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "");
+    }
     public List<AuditLogEntity> buildAuditTrail(int limit) {
         List<AuditLogEntity> trail = new ArrayList<>();
 

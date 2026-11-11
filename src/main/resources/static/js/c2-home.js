@@ -51,6 +51,7 @@ const c2Home = {
 
       if (window.c2Map) c2Map.renderVictimMarkers(this.incidents);
       if (window.c2Triage) c2Triage.updateFromIncidents(this.incidents);
+      if (window.c2Kanban) c2Kanban.render(this.incidents);
     } catch (e) {
       console.error('[c2Home] refresh error:', e);
     }
@@ -147,6 +148,8 @@ const c2Home = {
         `;
       }
 
+      const dossierBtn = `<button class="btn-tactical" style="padding:3px 6px;font-size:9px;margin-right:4px" onclick="c2Dossier.openDossier('${item.nodeId}')">📁 HỒ SƠ</button>`;
+
       return `<tr>
         <td><strong style="color:var(--aero-cyan)">${item.nodeId}</strong></td>
         <td class="text-cell">${item.fullName}</td>
@@ -154,7 +157,7 @@ const c2Home = {
         <td><strong style="color:var(--defcon-red)">${item.bloodType || 'O+'}</strong></td>
         <td class="text-cell">${item.alertType}</td>
         <td>${statusMap[item.status] || item.status}</td>
-        <td>${action}</td>
+        <td>${dossierBtn}${action}</td>
       </tr>`;
     }).join('');
   },

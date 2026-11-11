@@ -67,6 +67,11 @@
       </div>
 
       <div class="header-controls">
+        <button id="btn-devices-modal" class="btn-tactical cyan" onclick="c2Devices.openModal()" title="Quản lý thiết bị tham gia mạng và quét mã QR ghép đôi">
+          <svg class="btn-icon" viewBox="0 0 24 24" width="13" height="13" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+          GHÉP ĐÔI MESH
+        </button>
+        <div id="hud-user-session" style="display:inline-flex;align-items:center"></div>
         <button id="btn-palette-toggle" class="btn-tactical" onclick="c2Palette.toggle()" title="Mở Command Palette tác chiến dã chiến (Ctrl+K)" style="color:var(--aero-cyan,#00F0FF);border-color:rgba(0,240,255,.35)">
           <svg class="btn-icon" viewBox="0 0 24 24" width="13" height="13" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           CTRL+K
@@ -280,31 +285,68 @@
             </table>
           </div>
 
-          <!-- All Incidents Table -->
+          <!-- All Incidents Table & Kanban View -->
           <div class="avionics-panel">
             <div class="panel-header">
               <span class="panel-title">
-                <span class="panel-accent">📋</span> TOÀN BỘ DANH SÁCH TIẾP NHẬN
+                <span class="panel-accent">📋</span> TIẾP NHẬN & ĐIỀU PHỐI NẠN NHÂN
                 <span class="kicker">SQLITE WAL PERSISTED</span>
               </span>
-              <button class="panel-more-btn" id="btn-export-csv-home">XUẤT CSV</button>
+              <div style="display:flex;gap:8px">
+                <button class="panel-more-btn" id="btn-toggle-kanban" onclick="c2Kanban.toggleView()">📊 BẢNG KANBAN ĐIỀU PHỐI</button>
+                <button class="panel-more-btn" id="btn-export-csv-home">XUẤT CSV</button>
+              </div>
             </div>
-            <table class="tactical-table">
-              <thead>
-                <tr>
-                  <th>NODE ID <span class="sort-icon">↕</span></th>
-                  <th>HỌ TÊN</th>
-                  <th>SĐT</th>
-                  <th>NHÓM MÁU</th>
-                  <th>TÌNH TRẠNG</th>
-                  <th>TRẠNG THÁI</th>
-                  <th>XỬ LÝ</th>
-                </tr>
-              </thead>
-              <tbody id="all-incidents-tbody">
-                <tr><td colspan="7"><div class="state-empty"><span class="state-icon">📡</span><p class="state-title">ĐANG TẢI DỮ LIỆU</p><p class="state-desc">Đang kết nối tới cơ sở dữ liệu SQLite...</p></div></td></tr>
-              </tbody>
-            </table>
+
+            <!-- Dạng bảng truyền thống -->
+            <div id="all-incidents-table-wrapper">
+              <table class="tactical-table">
+                <thead>
+                  <tr>
+                    <th>NODE ID <span class="sort-icon">↕</span></th>
+                    <th>HỌ TÊN</th>
+                    <th>SĐT</th>
+                    <th>NHÓM MÁU</th>
+                    <th>TÌNH TRẠNG</th>
+                    <th>TRẠNG THÁI</th>
+                    <th>XỬ LÝ</th>
+                  </tr>
+                </thead>
+                <tbody id="all-incidents-tbody">
+                  <tr><td colspan="7"><div class="state-empty"><span class="state-icon">📡</span><p class="state-title">ĐANG TẢI DỮ LIỆU</p><p class="state-desc">Đang kết nối tới cơ sở dữ liệu SQLite...</p></div></td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Dạng bảng Kanban 3 cột (U3) -->
+            <div id="incidents-kanban-wrapper" class="incidents-kanban-wrapper" style="display:none">
+              <!-- Cột 1: Chờ điều phối (PENDING) -->
+              <div class="kanban-column">
+                <div class="kanban-col-header" style="color:var(--defcon-red);border-left:3px solid var(--defcon-red)">
+                  <span>🔴 CHỜ ĐIỀU PHỐI</span>
+                  <span class="badge pending" id="kanban-count-pending">0</span>
+                </div>
+                <div class="kanban-col-body" id="kanban-col-pending" data-status="PENDING"></div>
+              </div>
+
+              <!-- Cột 2: Đang tiếp cận (DISPATCHED) -->
+              <div class="kanban-column">
+                <div class="kanban-col-header" style="color:var(--orbital-amber);border-left:3px solid var(--orbital-amber)">
+                  <span>🟡 ĐANG TIẾP CẬN</span>
+                  <span class="badge dispatched" id="kanban-count-dispatched">0</span>
+                </div>
+                <div class="kanban-col-body" id="kanban-col-dispatched" data-status="DISPATCHED"></div>
+              </div>
+
+              <!-- Cột 3: Đã cứu an toàn (RESOLVED) -->
+              <div class="kanban-column">
+                <div class="kanban-col-header" style="color:var(--life-green);border-left:3px solid var(--life-green)">
+                  <span>🟢 ĐÃ CỨU AN TOÀN</span>
+                  <span class="badge resolved" id="kanban-count-resolved">0</span>
+                </div>
+                <div class="kanban-col-body" id="kanban-col-resolved" data-status="RESOLVED"></div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -896,6 +938,10 @@
             <span class="kicker">SHA-256 VERIFIED IMMUTABLE EVIDENCE</span>
           </span>
           <div style="display:flex;gap:8px">
+            <a href="/api/reports/geojson" download="mesh_rescue_cop.geojson" class="btn-tactical cyan" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+              <svg class="btn-icon" viewBox="0 0 24 24" width="12" height="12" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              XUẤT BẢN ĐỒ GEOJSON
+            </a>
             <button class="btn-tactical danger" id="btn-export-iap">
               <svg class="btn-icon" viewBox="0 0 24 24" width="12" height="12" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
               IN BÁO CÁO IAP (PDF)
@@ -1160,6 +1206,178 @@
       </div>
     </div>
 
+    <!-- ████████████████████████████████████████████████████████████████████████
+         §INCIDENT DOSSIER DRAWER & TIMELINE (U2)
+         ████████████████████████████████████████████████████████████████████████ -->
+    <div class="dossier-overlay" id="dossier-overlay" onclick="c2Dossier.closeDossier()"></div>
+    <div class="incident-dossier-drawer" id="incident-dossier-drawer">
+      <div class="dossier-header">
+        <div>
+          <div style="font-size:10px;color:var(--text-muted);letter-spacing:1px;font-weight:700">HỒ SƠ VỤ VIỆC & NHẬT KÝ TÁC CHIẾN</div>
+          <div style="font-size:14px;font-weight:700;color:#fff;margin-top:2px" id="dossier-title">NODE_ID • Tên nạn nhân</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span id="dossier-status-badge" class="badge pending">CHỜ CỨU</span>
+          <button onclick="c2Dossier.closeDossier()" style="background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;padding:2px 8px">✕</button>
+        </div>
+      </div>
+
+      <div class="dossier-body">
+        <!-- Vị trí GPS & Fix Status -->
+        <div class="dossier-section">
+          <div style="font-size:10px;color:var(--aero-cyan);font-weight:700;letter-spacing:1px;margin-bottom:4px">ĐỊNH VỊ TÁC CHIẾN</div>
+          <div id="dossier-gps-info" style="font-size:11px;color:#fff"></div>
+        </div>
+
+        <!-- Thông tin y tế & Nạn nhân -->
+        <div class="dossier-section">
+          <div style="font-size:10px;color:var(--orbital-amber);font-weight:700;letter-spacing:1px;margin-bottom:4px">THÔNG TIN HIỆN TRƯỜNG & Y TẾ</div>
+          <div id="dossier-medical-info"></div>
+        </div>
+
+        <!-- Ghi chú tác chiến nhanh -->
+        <div class="dossier-section">
+          <div style="font-size:10px;color:var(--life-green);font-weight:700;letter-spacing:1px;margin-bottom:6px">GHI NHẬT KÝ / CHỈ THỊ CHỈ HUY</div>
+          <div style="display:flex;gap:6px;margin-bottom:6px">
+            <select id="dossier-event-type" class="config-input" style="width:140px;font-size:10px;padding:4px">
+              <option value="NOTE">Ghi chú</option>
+              <option value="OPERATOR_ACK">Tiếp nhận ca</option>
+              <option value="DISPATCH_SENT">Phát lệnh</option>
+              <option value="RESOLVED">Đã giải cứu</option>
+              <option value="FALSE_ALARM">Báo động giả</option>
+            </select>
+            <input type="text" id="dossier-note-input" class="config-input" placeholder="Nhập chỉ thị hoặc cập nhật hiện trường..." style="flex:1;font-size:10px;padding:4px">
+            <button class="btn-tactical cyan" onclick="c2Dossier.addEvent()" style="padding:4px 10px;font-size:10px">GHI</button>
+          </div>
+        </div>
+
+        <!-- Dòng thời gian vụ việc -->
+        <div class="dossier-section" style="flex:1">
+          <div style="font-size:10px;color:var(--text-muted);font-weight:700;letter-spacing:1px;margin-bottom:8px">DÒNG THỜI GIAN SỰ KIỆN (TIMELINE)</div>
+          <div id="dossier-timeline-list"></div>
+        </div>
+      </div>
+
+      <div class="dossier-footer">
+        <div style="display:flex;gap:6px">
+          <button class="btn-tactical success" style="padding:6px 12px;font-size:10px" onclick="c2Dossier.updateStatusFromDossier('RESOLVED')">✓ ĐÃ CỨU AN TOÀN</button>
+          <button class="btn-tactical" style="padding:6px 12px;font-size:10px" onclick="c2Dossier.updateStatusFromDossier('PENDING')">↺ ĐẶT VỀ CHỜ</button>
+        </div>
+        <button class="btn-tactical" style="padding:6px 12px;font-size:10px" onclick="c2Dossier.closeDossier()">ĐÓNG</button>
+      </div>
+    </div>
+
+    <!-- ████████████████████████████████████████████████████████████████████████
+         §LOGIN MODAL (U1)
+         ████████████████████████████████████████████████████████████████████████ -->
+    <div class="modal-overlay" id="login-modal">
+      <div class="modal-box" style="max-width:380px">
+        <div class="modal-title">🔑 ĐĂNG NHẬP CÁN BỘ TÁC CHIẾN</div>
+        <div id="login-error-msg" style="color:var(--defcon-red);font-size:10px;margin-bottom:8px"></div>
+        <div class="config-field">
+          <label class="config-label">TÊN ĐĂNG NHẬP</label>
+          <input type="text" class="config-input" id="login-username" value="admin" placeholder="Tên đăng nhập...">
+        </div>
+        <div class="config-field">
+          <label class="config-label">MẬT KHẨU</label>
+          <input type="password" class="config-input" id="login-password" value="admin123" placeholder="Mật khẩu...">
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+          <button class="btn-tactical" onclick="c2Auth.closeLoginModal()">HỦY</button>
+          <button class="btn-tactical cyan" onclick="c2Auth.login()">ĐĂNG NHẬP</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ████████████████████████████████████████████████████████████████████████
+         §DUTY OFFICER MANAGEMENT MODAL (U1)
+         ████████████████████████████████████████████████████████████████████████ -->
+    <div class="modal-overlay" id="admin-users-modal">
+      <div class="modal-box" style="max-width:640px">
+        <div class="modal-title">⚙ QUẢN LÝ CÁN BỘ TRỰC BAN & PHÂN QUYỀN</div>
+        
+        <!-- Danh sách cán bộ -->
+        <table class="tactical-table" style="margin-top:12px;margin-bottom:16px">
+          <thead>
+            <tr>
+              <th>TÀI KHOẢN</th>
+              <th>HỌ TÊN CÁN BỘ</th>
+              <th>VAI TRÒ</th>
+              <th>TRẠNG THÁI</th>
+              <th>THAO TÁC</th>
+            </tr>
+          </thead>
+          <tbody id="admin-users-tbody"></tbody>
+        </table>
+
+        <!-- Form thêm cán bộ mới -->
+        <div class="dossier-section" style="margin-top:12px">
+          <div style="font-size:10px;color:var(--aero-cyan);font-weight:700;margin-bottom:8px">THÊM CÁN BỘ TRỰC BAN MỚI</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <input type="text" class="config-input" id="new-user-username" placeholder="Tên đăng nhập">
+            <input type="text" class="config-input" id="new-user-fullname" placeholder="Họ và tên cán bộ">
+            <input type="password" class="config-input" id="new-user-password" placeholder="Mật khẩu tác chiến">
+            <select class="config-input" id="new-user-role">
+              <option value="DISPATCHER">DISPATCHER (Điều phối viên)</option>
+              <option value="COMMANDER">COMMANDER (Chỉ huy trưởng)</option>
+              <option value="OBSERVER">OBSERVER (Quan sát viên)</option>
+              <option value="ADMIN">ADMIN (Quản trị viên)</option>
+            </select>
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:10px">
+            <button class="btn-tactical cyan" onclick="c2Auth.createUser()">+ THÊM CÁN BỘ</button>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;margin-top:16px">
+          <button class="btn-tactical" onclick="c2Auth.closeAdminModal()">ĐÓNG</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ████████████████████████████████████████████████████████████████████████
+         §DEVICE REGISTRY & PAIRING MODAL (U4)
+         ████████████████████████████████████████████████████████████████████████ -->
+    <div class="modal-overlay" id="devices-modal">
+      <div class="modal-box" style="max-width:680px">
+        <div class="modal-title">📱 THIẾT BỊ MẠNG MESH & GHÉP ĐÔI ZERO-CONFIG</div>
+
+        <div style="display:grid;grid-template-columns:200px 1fr;gap:20px;align-items:center;margin-top:14px;background:rgba(255,255,255,0.03);padding:14px;border-radius:4px">
+          <div style="text-align:center">
+            <div id="devices-qr-container" style="display:inline-block;padding:8px;background:#fff;border-radius:4px"></div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:6px">MỞ APP ANDROID VÀ QUÉT MÃ</div>
+          </div>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#fff;margin-bottom:8px">THÔNG SỐ GHÉP ĐÔI TỰ ĐỘNG</div>
+            <div id="devices-qr-details" style="font-size:11px;color:var(--text-secondary);display:flex;flex-direction:column;gap:4px"></div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:8px">
+              ℹ Điện thoại Android của bạn Trâm kết nối vào cùng Wi-Fi dã chiến, quét mã này để tự động thiết lập cổng TCP 8888 và gửi SOS hai chiều.
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px">
+          <div style="font-size:11px;font-weight:700;color:var(--aero-cyan);margin-bottom:6px">DANH SÁCH THIẾT BỊ ĐÃ THAM GIA MẠNG MESH</div>
+          <table class="tactical-table">
+            <thead>
+              <tr>
+                <th>NODE ID</th>
+                <th>TÊN THIẾT BỊ</th>
+                <th>IP : CỔNG</th>
+                <th>TRẠNG THÁI</th>
+                <th>HEARTBEAT CUỐI</th>
+              </tr>
+            </thead>
+            <tbody id="devices-table-tbody"></tbody>
+          </table>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;margin-top:16px">
+          <button class="btn-tactical" onclick="c2Devices.closeModal()">ĐÓNG</button>
+        </div>
+      </div>
+    </div>
+
   </main>
 
   <!-- ████████████████████████████████████████████████████████████████████████
@@ -1182,6 +1400,10 @@
   <script src="js/c2-audit.js"></script>
   <script src="js/c2-config.js"></script>
   <script src="js/c2-home.js"></script>
+  <script src="js/c2-dossier.js"></script>
+  <script src="js/c2-kanban.js"></script>
+  <script src="js/c2-auth.js"></script>
+  <script src="js/c2-devices.js"></script>
   <script src="js/c2-simulator.js"></script>
   <script src="js/c2-palette.js"></script>
   <script src="js/c2-app.js"></script>

@@ -1889,3 +1889,118 @@ table.tactical-table tr:nth-child(even) { background: rgba(255,255,255,.015); }
   .kpi-number { color: #000 !important; text-shadow: none !important; }
   table.tactical-table td, table.tactical-table th { color: #000; border-color: #ddd; }
 }
+
+/* ==========================================================================
+   §INCIDENT DOSSIER DRAWER & TIMELINE (U2)
+   ========================================================================== */
+.dossier-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 1200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.dossier-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.incident-dossier-drawer {
+  position: fixed;
+  top: 0; right: -520px; bottom: 0;
+  width: 500px;
+  max-width: 90vw;
+  background: #080C16;
+  border-left: 1px solid var(--aero-cyan);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.85);
+  z-index: 1201;
+  display: flex;
+  flex-direction: column;
+  transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.incident-dossier-drawer.active {
+  right: 0;
+}
+
+.dossier-header {
+  padding: 16px 20px;
+  background: #0E131F;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dossier-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dossier-section {
+  background: rgba(14, 19, 31, 0.7);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 14px;
+}
+
+.dossier-footer {
+  padding: 14px 20px;
+  background: #0A0E18;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* ==========================================================================
+   §DISPATCH KANBAN BOARD (U3)
+   ========================================================================== */
+.incidents-kanban-wrapper {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.kanban-column {
+  background: rgba(8, 12, 22, 0.7);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  max-height: 600px;
+}
+
+.kanban-col-header {
+  padding: 10px 14px;
+  background: rgba(14, 19, 31, 0.95);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.kanban-col-body {
+  padding: 12px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 200px;
+  transition: background 0.2s ease;
+}
+
+@media (max-width: 900px) {
+  .incidents-kanban-wrapper {
+    grid-template-columns: 1fr;
+  }
+}
