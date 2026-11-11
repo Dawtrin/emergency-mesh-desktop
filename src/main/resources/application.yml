@@ -1,0 +1,26 @@
+server:
+  port: 8080
+
+mesh:
+  tcp:
+    port: 8888
+    host: 0.0.0.0
+  outbound:
+    host: localhost
+    port: 8889
+
+spring:
+  datasource:
+    url: jdbc:sqlite:rescue_c2.db
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      maximum-pool-size: 4
+      connection-timeout: 5000
+  jackson:
+    serialization:
+      write-dates-as-timestamps: true
+
+logging:
+  level:
+    com.rescue.mesh: INFO
+    org.springframework.web.socket: INFO

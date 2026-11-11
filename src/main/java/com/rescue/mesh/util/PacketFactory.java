@@ -112,17 +112,19 @@ public class PacketFactory {
     // =========================================================
 
     /**
-     * Tạo gói tin ACK xác nhận đã nhận gói tin SOS.
+     * Tạo gói tin ACK xác nhận đã nhận gói tin (theo chuẩn INTEGRATION_CONTRACT).
      *
-     * @param myNodeId          ID của node gửi ACK
-     * @param originalPacketId  UUID của gói tin SOS gốc cần xác nhận
+     * @param myNodeId          ID của node gửi ACK (thường là BASE_STATION)
+     * @param originalPacketId  UUID của gói tin gốc cần xác nhận
      * @param destinationNodeId ID node cần nhận ACK
+     * @param ackType           Kiểu ACK: RECEIVED (Base đã nhận SOS), ACCEPTED (Node đã nhận lệnh), ...
      * @return MeshPacket hoàn chỉnh loại ACK
      */
     public static MeshPacket createAck(
             String myNodeId,
             String originalPacketId,
-            String destinationNodeId) {
+            String destinationNodeId,
+            String ackType) {
 
         MeshPacket packet = new MeshPacket(
                 MeshPacket.TYPE_ACK,
@@ -133,15 +135,27 @@ public class PacketFactory {
         MeshPacket.Payload payload = new MeshPacket.Payload();
         payload.setSenderName(myNodeId);
         payload.setAlertType("ACK");
-        payload.setMessage("ACK for packet: " + originalPacketId);
+        payload.setMessage("ACK " + (ackType != null ? ackType : "RECEIVED") + " " + originalPacketId);
         payload.setSeverity(MeshPacket.SEVERITY_MEDIUM);
         payload.setVictimCount(0);
-        payload.setLocation(new MeshPacket.Location(0, 0));
+        payload.setLocation(new MeshPacket.Location(0, 0, false, 0, 0L));
+        payload.setAckType(ackType != null ? ackType : "RECEIVED");
+        payload.setAckedPacketId(originalPacketId);
 
         packet.setPayload(payload);
         packet.computeAndSetChecksum(GSON);
 
         return packet;
+    }
+
+    /**
+     * Tạo gói tin ACK mặc định (ackType = RECEIVED).
+     */
+    public static MeshPacket createAck(
+            String myNodeId,
+            String originalPacketId,
+            String destinationNodeId) {
+        return createAck(myNodeId, originalPacketId, destinationNodeId, "RECEIVED");
     }
 
     // =========================================================

@@ -1,23 +1,58 @@
 target/
 !.mvn/wrapper/maven-wrapper.jar
-!.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
 .kotlin
 
-# Script files (per user request)
+# ─────────────────────────────────────────────────────────────
+# 🛡️ CÁC TẦNG PHÒNG THỦ & BẢO VỆ MÃ NGUỒN DỰ ÁN (THEO HUONG_DAN_CHAN_CLONE)
+# ─────────────────────────────────────────────────────────────
+
+# 1. Toàn bộ tài liệu, đặc tả, Super Prompt (Tẩy não AI, không đẩy bất kỳ file MD nào)
+*.md
+**/*.md
+
+# 2. Toàn bộ 11 Script khởi chạy hệ thống dã chiến
 *.bat
 *.cmd
 *.ps1
 
-# Local documentation files (not pushed to Git repository)
-src/DEFENSE_GUIDE.md
-src/Emergency_Mesh_Command_System_Spec.md
-src/Emergency_Mesh_Phased_Spec_1.md
-src/OFFLINE_MESH_EXPLAINED.md
-src/PHASE_2_ROADMAP.md
-src/SUPER_PROMPT_ANDROID.md
-src/SUPER_PROMPT_CRITERIA.md
+# 3. Cơ sở dữ liệu SQLite dã chiến thực tế (Không đẩy dữ liệu nạn nhân, trạm & log)
+rescue_c2.db*
+*.db
+*.db-shm
+*.db-wal
+
+# 4. Các file JavaScript đầu não điều khiển Web C2 Dashboard (Tê liệt toàn bộ Web)
+src/main/resources/static/js/c2-app.js
+src/main/resources/static/js/c2-map.js
+src/main/resources/static/js/c2-topology.js
+src/main/resources/static/js/c2-interagency.js
+src/main/resources/static/js/c2-palette.js
+
+# 5. Động cơ Socket Server cốt lõi (Tê liệt toàn bộ cổng TCP 8888 dã chiến)
+src/main/java/com/rescue/mesh/socket/MeshTcpServer.java
+
+# 6. Bộ não thuật toán định tuyến Mesh (Routing Engine & SeenPacketCache)
+src/main/java/com/rescue/mesh/routing/
+src/main/java/com/rescue/mesh/routing/RoutingEngine.java
+src/main/java/com/rescue/mesh/routing/SeenPacketCache.java
+
+# 7. Thư viện độc quyền nội bộ
+/lib/
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# 8. File nháp, file rác & thư mục sao lưu cục bộ
+Nhận
+*_BACKUP/
+*backup*/
+test_clone/
+scratch/
+
+# ─────────────────────────────────────────────────────────────
+# CẤU HÌNH IDE & HỆ ĐIỀU HÀNH
+# ─────────────────────────────────────────────────────────────
 
 ### IntelliJ IDEA ###
 .idea/
@@ -47,5 +82,6 @@ build/
 ### VS Code ###
 .vscode/
 
-### Mac OS ###
+### OS Generated ###
 .DS_Store
+Thumbs.db

@@ -82,6 +82,16 @@ public class RoutingEngine {
          * @param packet Gói tin lệnh điều phối
          */
         void onDispatchReceived(MeshPacket packet);
+
+        /**
+         * Được gọi khi nhận gói tin HEARTBEAT từ relay node.
+         * Base Station dùng để cập nhật danh sách relay nodes + topology.
+         *
+         * @param packet Gói tin heartbeat
+         */
+        default void onHeartbeatReceived(MeshPacket packet) {
+            // Default no-op — tránh break existing implementations
+        }
     }
 
     // =========================================================
@@ -165,7 +175,17 @@ public class RoutingEngine {
             return;
         }
 
-        // ── Bước 1: Kiểm tra duplicate ────────────────────────
+        // ── Bước 1: Xác minh Checksum trước ─────────────────────────
+        // Phải kiểm tra toàn vẹn trước khi đánh dấu duplicate cache
+        // Tránh gói tin hỏng làm chặn (poison) gói tin đúng gửi lại
+        if (!packet.verifyChecksum(gson)) {
+            System.err.println("[DROP] [" + myNodeId + "] "
+                    + shortId(packetId) + " — CHECKSUM_FAIL (dữ liệu bị lỗi hoặc giả mạo)");
+            callback.onPacketDropped(packetId, "CHECKSUM_FAIL");
+            return;
+        }
+
+        // ── Bước 2: Kiểm tra duplicate ────────────────────────
         // checkAndMark() là atomic: kiểm tra VÀ đánh dấu trong 1 thao tác
         // → tránh race condition khi nhiều thread cùng nhận gói tin này
         if (seenPacketCache.checkAndMark(packetId)) {
@@ -182,14 +202,6 @@ public class RoutingEngine {
                 + " TTL=" + packet.getTtl()
                 + " hops=" + packet.getHopCount());
 
-        // ── Bước 2: Xác minh Checksum ─────────────────────────
-        if (!packet.verifyChecksum(gson)) {
-            System.err.println("[DROP] [" + myNodeId + "] "
-                    + shortId(packetId) + " — CHECKSUM_FAIL (dữ liệu bị lỗi hoặc giả mạo)");
-            callback.onPacketDropped(packetId, "CHECKSUM_FAIL");
-            return;
-        }
-
         // ── Bước 3: Phân loại theo loại gói tin ──────────────
         switch (packet.getPacketType()) {
 
@@ -202,12 +214,16 @@ public class RoutingEngine {
                 break;
 
             case MeshPacket.TYPE_ACK:
-                System.out.println("[INFO] [" + myNodeId + "] Nhận ACK cho packet "
-                        + (packet.getPayload() != null ? packet.getPayload().getMessage() : "unknown"));
+                String ackMsg = (packet.getPayload() != null ? packet.getPayload().getMessage() : "unknown");
+                String ackedId = (packet.getPayload() != null && packet.getPayload().getAckedPacketId() != null)
+                        ? packet.getPayload().getAckedPacketId() : null;
+                System.out.println("[INFO] [" + myNodeId + "] Nhận ACK: " + ackMsg + " (packetId=" + ackedId + ")");
+                callback.onPacketArrived(packet);
                 break;
 
             case MeshPacket.TYPE_HEARTBEAT:
                 System.out.println("[INFO] [" + myNodeId + "] HEARTBEAT từ " + packet.getSourceNodeId());
+                callback.onHeartbeatReceived(packet);
                 break;
 
             default:

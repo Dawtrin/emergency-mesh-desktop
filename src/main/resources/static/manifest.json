@@ -1,0 +1,49 @@
+{
+  "name": "RINNSAN SCOUT — Tactical Command & Control",
+  "short_name": "RINNSAN SCOUT",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#05070B",
+  "theme_color": "#05070B",
+  "description": "Aerospace Tactical Command & Control Center for Emergency Mesh Rescue — 100% Offline-First",
+  "orientation": "any",
+  "categories": ["utilities", "productivity", "government"],
+  "icons": [
+    {
+      "src": "images/c2-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "images/c2-icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Bản đồ chiến thuật",
+      "short_name": "Map",
+      "description": "Bản đồ cứu hộ dã chiến thời gian thực",
+      "url": "./index.html#map",
+      "icons": [{ "src": "images/c2-icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Giám sát NOC Telemetry",
+      "short_name": "NOC",
+      "description": "Giám sát mạng lưới Mesh và thông lượng",
+      "url": "./index.html#noc",
+      "icons": [{ "src": "images/c2-icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Phân loại Nạn nhân",
+      "short_name": "Triage",
+      "description": "Phân loại theo chuẩn y tế START",
+      "url": "./index.html#triage",
+      "icons": [{ "src": "images/c2-icon.svg", "sizes": "any" }]
+    }
+  ]
+}

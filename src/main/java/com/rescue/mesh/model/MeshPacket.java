@@ -107,6 +107,21 @@ public class MeshPacket {
 
         private Location location;
 
+        /** Số điện thoại nạn nhân (dùng cho liên ngành 115) */
+        private String phoneNumber;
+
+        /** Nhóm máu: O+, A+, B+, AB-, ... (dùng cho cấp cứu y tế) */
+        private String bloodType;
+
+        /** Ghi chú y khoa: bệnh nền, dị ứng thuốc, ... */
+        private String medicalNotes;
+
+        /** Kiểu phản hồi ACK: RECEIVED (đã tới Base), ACCEPTED (đã nhận lệnh), COMPLETED, ... */
+        private String ackType;
+
+        /** ID gói tin gốc được phản hồi ACK */
+        private String ackedPacketId;
+
         // --- Getters & Setters ---
 
         public String getSenderName() { return senderName; }
@@ -127,6 +142,21 @@ public class MeshPacket {
         public Location getLocation() { return location; }
         public void setLocation(Location location) { this.location = location; }
 
+        public String getPhoneNumber() { return phoneNumber; }
+        public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+
+        public String getBloodType() { return bloodType; }
+        public void setBloodType(String bloodType) { this.bloodType = bloodType; }
+
+        public String getMedicalNotes() { return medicalNotes; }
+        public void setMedicalNotes(String medicalNotes) { this.medicalNotes = medicalNotes; }
+
+        public String getAckType() { return ackType; }
+        public void setAckType(String ackType) { this.ackType = ackType; }
+
+        public String getAckedPacketId() { return ackedPacketId; }
+        public void setAckedPacketId(String ackedPacketId) { this.ackedPacketId = ackedPacketId; }
+
         @Override
         public String toString() {
             return "Payload{"
@@ -134,10 +164,12 @@ public class MeshPacket {
                     + ", alertType='" + alertType + '\''
                     + ", severity='" + severity + '\''
                     + ", victimCount=" + victimCount
+                    + ", bloodType='" + bloodType + '\''
                     + ", location=" + location
                     + '}';
         }
     }
+
 
     // ===== INNER CLASS: LOCATION =====
 
@@ -148,6 +180,9 @@ public class MeshPacket {
 
         private double latitude;
         private double longitude;
+        private Boolean hasFix;
+        private Integer accuracyM;
+        private Long fixAgeMs;
 
         public Location() {}
 
@@ -156,15 +191,33 @@ public class MeshPacket {
             this.longitude = longitude;
         }
 
+        public Location(double latitude, double longitude, Boolean hasFix, Integer accuracyM, Long fixAgeMs) {
+            this.latitude  = latitude;
+            this.longitude = longitude;
+            this.hasFix    = hasFix;
+            this.accuracyM = accuracyM;
+            this.fixAgeMs  = fixAgeMs;
+        }
+
         public double getLatitude()  { return latitude; }
         public void setLatitude(double latitude) { this.latitude = latitude; }
 
         public double getLongitude() { return longitude; }
         public void setLongitude(double longitude) { this.longitude = longitude; }
 
+        public Boolean getHasFix() { return hasFix; }
+        public void setHasFix(Boolean hasFix) { this.hasFix = hasFix; }
+
+        public Integer getAccuracyM() { return accuracyM; }
+        public void setAccuracyM(Integer accuracyM) { this.accuracyM = accuracyM; }
+
+        public Long getFixAgeMs() { return fixAgeMs; }
+        public void setFixAgeMs(Long fixAgeMs) { this.fixAgeMs = fixAgeMs; }
+
         @Override
         public String toString() {
-            return "Location{lat=" + latitude + ", lon=" + longitude + '}';
+            return "Location{lat=" + latitude + ", lon=" + longitude
+                    + ", hasFix=" + hasFix + ", acc=" + accuracyM + "m, age=" + fixAgeMs + "ms}";
         }
     }
 
