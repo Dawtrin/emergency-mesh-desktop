@@ -30,6 +30,9 @@ public class SimulatorApiController {
     @Value("${mesh.tcp.port:8888}")
     private int meshPort;
 
+    @Value("${mesh.demo-mode:true}")
+    private boolean demoMode;
+
     public SimulatorApiController(ScenarioSimulatorService simulator,
                                   SimpMessagingTemplate messagingTemplate,
                                   DatabaseManager databaseManager) {
@@ -125,10 +128,17 @@ public class SimulatorApiController {
 
     /**
      * XÓA TOÀN BỘ DỮ LIỆU MẪU & LÀM SẠCH HỆ THỐNG
-     * POST /api/simulator/clear-data
+     * POST /api/simulator/clear-data (Bảo vệ: Chỉ cho phép khi demo-mode: true)
      */
     @PostMapping(value = "/clear-data", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> clearData() {
+        if (!demoMode) {
+            return ResponseEntity.status(403).body(Map.of(
+                    "status", "FORBIDDEN",
+                    "message", "Tính năng xóa sạch dữ liệu bị khóa trong môi trường vận hành thực tế (Production)!"
+            ));
+        }
+
         databaseManager.clearAllOperationalData();
 
         // Broadcast realtime cập nhật rỗng tới toàn bộ dashboard client

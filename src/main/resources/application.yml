@@ -8,6 +8,10 @@ mesh:
   outbound:
     host: localhost
     port: 8889
+  demo-mode: true
+  auth:
+    enabled: true
+    admin-token: "C2_COMMANDER_SECRET_KEY"
 
 spring:
   datasource:
