@@ -151,28 +151,27 @@ public class RoutingEngine {
      * Xử lý một gói tin nhận được — phương thức cốt lõi của hệ thống.
      *
      * Đây là cài đặt đầy đủ thuật toán định tuyến theo đặc tả:
-     *   Bước 1: Duplicate check
-     *   Bước 2: Checksum verify
+     *   Bước 1: Checksum verify
+     *   Bước 2: Duplicate check
      *   Bước 3: Phân loại gói tin (đích đến / cần relay)
      *   Bước 4: Relay hoặc Alert
      *
-     * Method này thread-safe nhờ SeenPacketCache.checkAndMark() atomic.
-     *
      * @param packet Gói tin MeshPacket đã được parse từ JSON
+     * @return true nếu gói tin hợp lệ và được tiếp nhận/chuyển tiếp; false nếu bị drop (lỗi checksum, trùng lặp...)
      */
-    public void processPacket(MeshPacket packet) {
+    public boolean processPacket(MeshPacket packet) {
 
         // ── Bảo vệ null ──────────────────────────────────────
         if (packet == null) {
             System.err.println("[ERROR] [" + myNodeId + "] processPacket: nhận được packet null");
-            return;
+            return false;
         }
 
         String packetId = packet.getPacketId();
         if (packetId == null || packetId.trim().isEmpty()) {
             System.err.println("[ERROR] [" + myNodeId + "] processPacket: packetId null hoặc rỗng");
             callback.onPacketDropped("UNKNOWN", "PARSE_ERROR");
-            return;
+            return false;
         }
 
         // ── Bước 1: Xác minh Checksum trước ─────────────────────────
@@ -182,7 +181,7 @@ public class RoutingEngine {
             System.err.println("[DROP] [" + myNodeId + "] "
                     + shortId(packetId) + " — CHECKSUM_FAIL (dữ liệu bị lỗi hoặc giả mạo)");
             callback.onPacketDropped(packetId, "CHECKSUM_FAIL");
-            return;
+            return false;
         }
 
         // ── Bước 2: Kiểm tra duplicate ────────────────────────
@@ -192,7 +191,7 @@ public class RoutingEngine {
             System.out.println("[DROP] [" + myNodeId + "] "
                     + shortId(packetId) + " — DUPLICATE (đã xử lý rồi)");
             callback.onPacketDropped(packetId, "DUPLICATE");
-            return;
+            return false;
         }
 
         System.out.println("[RECV] [" + myNodeId + "] "
@@ -207,11 +206,11 @@ public class RoutingEngine {
 
             case MeshPacket.TYPE_SOS_DATA:
                 processSosPacket(packet);
-                break;
+                return true;
 
             case MeshPacket.TYPE_DISPATCH_CMD:
                 processDispatchPacket(packet);
-                break;
+                return true;
 
             case MeshPacket.TYPE_ACK:
                 String ackMsg = (packet.getPayload() != null ? packet.getPayload().getMessage() : "unknown");
@@ -219,17 +218,18 @@ public class RoutingEngine {
                         ? packet.getPayload().getAckedPacketId() : null;
                 System.out.println("[INFO] [" + myNodeId + "] Nhận ACK: " + ackMsg + " (packetId=" + ackedId + ")");
                 callback.onPacketArrived(packet);
-                break;
+                return true;
 
             case MeshPacket.TYPE_HEARTBEAT:
                 System.out.println("[INFO] [" + myNodeId + "] HEARTBEAT từ " + packet.getSourceNodeId());
                 callback.onHeartbeatReceived(packet);
-                break;
+                return true;
 
             default:
                 System.err.println("[ERROR] [" + myNodeId + "] Loại packet không xác định: "
                         + packet.getPacketType());
                 callback.onPacketDropped(packetId, "UNKNOWN_TYPE");
+                return false;
         }
     }
 

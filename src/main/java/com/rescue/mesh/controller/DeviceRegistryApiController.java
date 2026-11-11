@@ -5,9 +5,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/devices")
@@ -32,6 +33,7 @@ public class DeviceRegistryApiController {
 
     /**
      * Tạo chuỗi dữ liệu cấu hình để vẽ mã QR Code ghép đôi thiết bị Android (Zero-Config).
+     * Tự động phát hiện IP LAN thực tế của máy trạm C2 để điện thoại Android kết nối thành công qua Wi-Fi dã chiến.
      */
     @GetMapping("/qr-config")
     public ResponseEntity<Map<String, Object>> getQrConfig() {
@@ -41,6 +43,39 @@ public class DeviceRegistryApiController {
         config.put("version", "v1.0");
         config.put("defaultTtl", 5);
         config.put("networkSsid", "MeshRescue_C2");
+
+        List<String> lanIps = new ArrayList<>();
+        String primaryIp = "127.0.0.1";
+
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                NetworkInterface iface = interfaces.nextElement();
+                if (iface.isLoopback() || !iface.isUp() || iface.isVirtual()) {
+                    continue;
+                }
+                Enumeration<InetAddress> addresses = iface.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    InetAddress addr = addresses.nextElement();
+                    if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
+                        String ip = addr.getHostAddress();
+                        lanIps.add(ip);
+                        // Ưu tiên dải mạng Wi-Fi/Ethernet thông dụng dã chiến 192.168.x.x hoặc 10.x.x.x
+                        if (ip.startsWith("192.168.") || ip.startsWith("10.") || ip.startsWith("172.")) {
+                            primaryIp = ip;
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+
+        if (!lanIps.isEmpty() && "127.0.0.1".equals(primaryIp)) {
+            primaryIp = lanIps.get(0);
+        }
+
+        config.put("primaryLanIp", primaryIp);
+        config.put("lanIpAddresses", lanIps);
+
         return ResponseEntity.ok(config);
     }
 }

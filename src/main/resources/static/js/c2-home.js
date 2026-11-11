@@ -12,12 +12,24 @@ const c2Home = {
     setInterval(() => this.refreshIncidents(), 3000);
   },
 
-  initQrCode() {
+  async initQrCode() {
     const box = document.getElementById('qrcode-box');
     if (!box || !window.QRCode) return;
     box.innerHTML = '';
-    const url = window.location.origin;
-    document.getElementById('qr-url-text')?.textContent && (document.getElementById('qr-url-text').textContent = url);
+    let url = window.location.origin;
+    try {
+      const res = await fetch('/api/devices/qr-config');
+      if (res.ok) {
+        const cfg = await res.json();
+        if (cfg.primaryLanIp && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+          const port = window.location.port ? `:${window.location.port}` : '';
+          url = `${window.location.protocol}//${cfg.primaryLanIp}${port}`;
+        }
+      }
+    } catch (ignored) {}
+
+    const textEl = document.getElementById('qr-url-text');
+    if (textEl) textEl.textContent = url;
     new QRCode(box, { text: url, width: 128, height: 128, colorDark: '#05070B', colorLight: '#FFFFFF', correctLevel: QRCode.CorrectLevel.M });
   },
 

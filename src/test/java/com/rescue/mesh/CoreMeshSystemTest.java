@@ -245,4 +245,92 @@ public class CoreMeshSystemTest {
         assertEquals("TTL_EXPIRED", reasonRef.get());
         engine.shutdown();
     }
+
+    @Test
+    @DisplayName("RoutingEngine: Gói tin hỏng Checksum bị DROP ngay và KHÔNG bị lưu vào cache (chống Poison Cache)")
+    void testChecksumFailDoesNotPoisonCache() {
+        AtomicInteger dropCount = new AtomicInteger(0);
+        AtomicReference<String> dropReason = new AtomicReference<>();
+        AtomicBoolean arrived = new AtomicBoolean(false);
+
+        RoutingEngine.RoutingCallback callback = new RoutingEngine.RoutingCallback() {
+            @Override public void onPacketArrived(MeshPacket packet) { arrived.set(true); }
+            @Override public void onPacketRelayed(MeshPacket packet, int nextHop) {}
+            @Override public void onPacketDropped(String packetId, String reason) {
+                dropCount.incrementAndGet();
+                dropReason.set(reason);
+            }
+            @Override public void onForwardError(int nextHop, String errorMessage) {}
+            @Override public void onDispatchReceived(MeshPacket packet) {}
+        };
+
+        RoutingEngine engine = new RoutingEngine(
+                MeshPacket.NODE_BASE_STATION,
+                "localhost",
+                -1,
+                callback
+        );
+
+        MeshPacket packet = PacketFactory.createSosPacket(
+                "NODE_TEST", "Victim Test", MeshPacket.ALERT_FLOOD,
+                "Cuu ho", 1, MeshPacket.SEVERITY_CRITICAL, 16.0, 108.0
+        );
+
+        // 1. Phá hỏng checksum
+        packet.setChecksum("invalid_corrupted_hash_00000000000000000000000000000000000000000");
+
+        boolean acceptedFail = engine.processPacket(packet);
+        assertFalse(acceptedFail, "Gói tin checksum sai phải bị từ chối");
+        assertEquals(1, dropCount.get());
+        assertEquals("CHECKSUM_FAIL", dropReason.get());
+        assertEquals(0, engine.getCacheSize(), "Cache không được lưu packetId của gói tin lỗi");
+
+        // 2. Gửi lại đúng gói tin đó với checksum hợp lệ
+        packet.computeAndSetChecksum(gson);
+        boolean acceptedSuccess = engine.processPacket(packet);
+        assertTrue(acceptedSuccess, "Gói tin gửi lại với checksum đúng phải được tiếp nhận");
+        assertTrue(arrived.get(), "Callback onPacketArrived phải được gọi");
+        assertEquals(1, engine.getCacheSize(), "Cache chỉ lưu khi gói tin hợp lệ");
+
+        engine.shutdown();
+    }
+
+    @Test
+    @DisplayName("Location: hasFix/accuracyM/fixAgeMs serialize an toàn và tương thích ngược")
+    void testGpsFixFieldsCompatibility() {
+        // Gói tin cũ không có GPS fix fields (null)
+        MeshPacket.Location locOld = new MeshPacket.Location(16.0, 108.0);
+        String jsonOld = gson.toJson(locOld);
+        assertFalse(jsonOld.contains("hasFix"), "Field null không được serialize ra JSON (giữ nguyên checksum cũ)");
+
+        // Gói tin mới có GPS fix fields
+        MeshPacket.Location locNew = new MeshPacket.Location(16.0, 108.0, true, 12, 1500L);
+        String jsonNew = gson.toJson(locNew);
+        assertTrue(jsonNew.contains("\"hasFix\":true"));
+        assertTrue(jsonNew.contains("\"accuracyM\":12"));
+        assertTrue(jsonNew.contains("\"fixAgeMs\":1500"));
+
+        MeshPacket.Location parsed = gson.fromJson(jsonNew, MeshPacket.Location.class);
+        assertEquals(true, parsed.getHasFix());
+        assertEquals(12, parsed.getAccuracyM());
+        assertEquals(1500L, parsed.getFixAgeMs());
+    }
+
+    @Test
+    @DisplayName("PacketFactory: Tạo gói ACK chuẩn với ackType và ackedPacketId")
+    void testCreateAckPacket() {
+        String originalPacketId = "uuid-sos-orig-123";
+        MeshPacket ack = PacketFactory.createAck(
+                MeshPacket.NODE_BASE_STATION,
+                originalPacketId,
+                "NODE_A",
+                "RECEIVED"
+        );
+
+        assertEquals(MeshPacket.TYPE_ACK, ack.getPacketType());
+        assertNotNull(ack.getPayload());
+        assertEquals("RECEIVED", ack.getPayload().getAckType());
+        assertEquals(originalPacketId, ack.getPayload().getAckedPacketId());
+        assertTrue(ack.verifyChecksum(gson), "ACK packet phải có Checksum hợp lệ");
+    }
 }

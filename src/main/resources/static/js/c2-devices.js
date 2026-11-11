@@ -32,9 +32,15 @@ const c2Devices = {
       const res = await fetch('/api/devices/qr-config');
       const config = await res.json();
 
+      // Tự động nhận diện host: nếu truy cập qua localhost/127.0.0.1 thì ưu tiên dùng IP mạng LAN thực để điện thoại kết nối được
+      let resolvedHost = window.location.hostname;
+      if (!resolvedHost || resolvedHost === 'localhost' || resolvedHost === '127.0.0.1') {
+        resolvedHost = config.primaryLanIp || window.location.hostname || '127.0.0.1';
+      }
+
       // Dữ liệu cấu hình cho Mobile app quét
       const qrData = JSON.stringify({
-        c2Host: window.location.hostname || '127.0.0.1',
+        c2Host: resolvedHost,
         c2Port: config.meshPort || 8888,
         protocol: config.protocol || 'TCP_JSON_MESH',
         version: config.version || 'v1.0',
@@ -52,7 +58,7 @@ const c2Devices = {
 
       if (details) {
         details.innerHTML = `
-          <div>C2 IP/Host: <strong style="color:var(--aero-cyan)">${window.location.hostname || '127.0.0.1'}</strong></div>
+          <div>C2 IP/Host: <strong style="color:var(--aero-cyan)">${resolvedHost}</strong></div>
           <div>Cổng Mesh TCP: <strong style="color:var(--orbital-amber)">${config.meshPort || 8888}</strong></div>
           <div>Giao thức: <strong style="color:var(--life-green)">${config.protocol || 'TCP_JSON_MESH'}</strong></div>
           <div>Mạng dã chiến: <strong>${config.networkSsid || 'MeshRescue_C2'}</strong></div>
