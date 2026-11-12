@@ -233,10 +233,14 @@ public class VictimDao {
     }
 
     private VictimRecord mapRow(ResultSet rs) throws SQLException {
-        Integer hasFixInt = (Integer) rs.getObject("has_fix");
-        Boolean hasFix = hasFixInt != null ? hasFixInt == 1 : null;
-        Integer accuracyM = (Integer) rs.getObject("accuracy_m");
-        Long fixAgeMs = (Long) rs.getObject("fix_age_ms");
+        Object fixObj = rs.getObject("has_fix");
+        Boolean hasFix = fixObj instanceof Number n ? n.intValue() == 1 : null;
+
+        Object accObj = rs.getObject("accuracy_m");
+        Integer accuracyM = accObj instanceof Number n ? n.intValue() : null;
+
+        Object fixAgeObj = rs.getObject("fix_age_ms");
+        Long fixAgeMs = fixAgeObj instanceof Number n ? n.longValue() : null;
 
         return new VictimRecord(
                 rs.getString("node_id"),

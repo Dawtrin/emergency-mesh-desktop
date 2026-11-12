@@ -31,10 +31,32 @@ class MeshE2EIntegrationTest {
     private static final int TCP_PORT = 8888;
     private static final String HTTP_BASE = "http://127.0.0.1:8080";
     private static String testNodeId;
+    private static org.springframework.context.ConfigurableApplicationContext springContext;
 
     @BeforeAll
     static void setUp() {
         testNodeId = "E2E_TEST_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        try (Socket s = new Socket(TCP_HOST, TCP_PORT)) {
+            // Server đã đang chạy sẵn bên ngoài
+        } catch (Exception e) {
+            // Server chưa chạy -> Tự động khởi động Spring Boot context phục vụ test E2E
+            try {
+                springContext = org.springframework.boot.SpringApplication.run(
+                        com.rescue.mesh.TacticalWebC2Application.class,
+                        "--spring.main.banner-mode=off"
+                );
+                Thread.sleep(2000);
+            } catch (Exception ex) {
+                System.err.println("[E2E-TEST] Không thể khởi động TacticalWebC2Application: " + ex.getMessage());
+            }
+        }
+    }
+
+    @AfterAll
+    static void tearDown() {
+        if (springContext != null && springContext.isActive()) {
+            springContext.close();
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -270,7 +292,11 @@ class MeshE2EIntegrationTest {
         conn.setConnectTimeout(3000);
         conn.setReadTimeout(3000);
 
-        if (conn.getResponseCode() != 200) return null;
+        int code = conn.getResponseCode();
+        if (code != 200) {
+            System.err.println("[HTTP-GET-DEBUG] GET " + url + " returned code: " + code);
+            return null;
+        }
 
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
