@@ -154,6 +154,51 @@ public class VictimDao {
     }
 
     /**
+     * Tra cứu hồ sơ nạn nhân theo từ khóa (tên, SĐT, nodeId, bệnh nền), nhóm máu và trạng thái.
+     */
+    public List<VictimRecord> search(String query, String bloodType, String status) {
+        StringBuilder sql = new StringBuilder("SELECT * FROM victims WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+
+        if (query != null && !query.isBlank()) {
+            String q = "%" + query.trim().toLowerCase() + "%";
+            sql.append(" AND (LOWER(full_name) LIKE ? OR LOWER(phone_number) LIKE ? OR LOWER(node_id) LIKE ? OR LOWER(medical_notes) LIKE ?)");
+            params.add(q);
+            params.add(q);
+            params.add(q);
+            params.add(q);
+        }
+
+        if (bloodType != null && !bloodType.isBlank() && !"ALL".equalsIgnoreCase(bloodType)) {
+            sql.append(" AND blood_type = ?");
+            params.add(bloodType.trim());
+        }
+
+        if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) {
+            sql.append(" AND status = ?");
+            params.add(status.trim().toUpperCase());
+        }
+
+        sql.append(" ORDER BY last_updated_timestamp DESC");
+
+        List<VictimRecord> results = new ArrayList<>();
+        try (Connection conn = dbManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    results.add(mapRow(rs));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[DB] VictimDao.search error: " + e.getMessage());
+        }
+        return results;
+    }
+
+    /**
      * Đếm số nạn nhân theo trạng thái.
      */
     public int countByStatus(String status) {

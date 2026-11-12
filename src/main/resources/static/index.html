@@ -117,6 +117,10 @@
         <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke-width="2"><path d="M12 2v20M2 12h20"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
         Y TẾ / TRIAGE
       </button>
+      <button class="nav-tab" data-tab="tab-directory">
+        <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+        HỒ SƠ NẠN NHÂN (APP)
+      </button>
       <button class="nav-tab" data-tab="tab-topology">
         <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke-width="2"><circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/><line x1="12" y1="8" x2="5" y2="16"/><line x1="12" y1="8" x2="19" y2="16"/></svg>
         TOPOLOGY
@@ -886,6 +890,110 @@
     </section>
 
     <!-- ════════════════════════════════════════════════════════════════════════
+         TAB: SỔ QUẢN LÝ HỒ SƠ NẠN NHÂN & NGƯỜI DÙNG APP (VICTIM DIRECTORY)
+         ════════════════════════════════════════════════════════════════════════ -->
+    <section id="tab-directory" class="tab-content">
+      
+      <!-- Thống kê nhóm máu & tổng quan người dùng App -->
+      <div style="display:grid;grid-template-columns:repeat(5, 1fr);gap:12px;margin-bottom:16px">
+        <div class="avionics-panel" style="padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--text-muted);font-weight:700">TỔNG HỒ SƠ APP</div>
+          <div style="font-size:22px;font-weight:800;color:var(--aero-cyan);margin-top:2px" id="dir-stat-total">0</div>
+        </div>
+        <div class="avionics-panel" style="padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--text-muted);font-weight:700">NHÓM MÁU O</div>
+          <div style="font-size:22px;font-weight:800;color:var(--defcon-red);margin-top:2px" id="dir-stat-o">0</div>
+        </div>
+        <div class="avionics-panel" style="padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--text-muted);font-weight:700">NHÓM MÁU A</div>
+          <div style="font-size:22px;font-weight:800;color:var(--orbital-amber);margin-top:2px" id="dir-stat-a">0</div>
+        </div>
+        <div class="avionics-panel" style="padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--text-muted);font-weight:700">NHÓM MÁU B</div>
+          <div style="font-size:22px;font-weight:800;color:#00F0FF;margin-top:2px" id="dir-stat-b">0</div>
+        </div>
+        <div class="avionics-panel" style="padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--text-muted);font-weight:700">NHÓM MÁU AB</div>
+          <div style="font-size:22px;font-weight:800;color:var(--life-green);margin-top:2px" id="dir-stat-ab">0</div>
+        </div>
+      </div>
+
+      <!-- Khung Tra cứu & Danh bạ 2 cột -->
+      <div style="display:grid;grid-template-columns:1fr 400px;gap:16px">
+        
+        <!-- CỘT TRÁI: THANH TÌM KIẾM & BẢNG DANH SÁCH HỒ SƠ -->
+        <div class="avionics-panel">
+          <div class="panel-header">
+            <span class="panel-title">
+              <svg class="btn-icon" viewBox="0 0 24 24" width="13" height="13" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              TRA CỨU HỒ SƠ NẠN NHÂN TỪ APP ANDROID
+              <span class="kicker">CITIZEN PROFILE REGISTRY</span>
+            </span>
+          </div>
+
+          <!-- Thanh tìm kiếm & Bộ lọc -->
+          <div style="display:grid;grid-template-columns:1fr 140px 140px 100px;gap:8px;padding:12px;background:rgba(255,255,255,0.02);border-bottom:1px solid var(--border-subtle)">
+            <input type="text" id="dir-search-input" class="config-input" placeholder="Tìm theo Tên, SĐT, Node ID hoặc bệnh nền..." onkeydown="if(event.key==='Enter') c2Directory.loadDirectory()">
+            <select id="dir-filter-blood" class="config-input" onchange="c2Directory.loadDirectory()">
+              <option value="ALL">Mọi nhóm máu</option>
+              <option value="O+">Nhóm O+</option>
+              <option value="O-">Nhóm O- (Hiếm)</option>
+              <option value="A+">Nhóm A+</option>
+              <option value="A-">Nhóm A-</option>
+              <option value="B+">Nhóm B+</option>
+              <option value="B-">Nhóm B-</option>
+              <option value="AB+">Nhóm AB+</option>
+              <option value="AB-">Nhóm AB- (Rất hiếm)</option>
+            </select>
+            <select id="dir-filter-status" class="config-input" onchange="c2Directory.loadDirectory()">
+              <option value="ALL">Mọi trạng thái</option>
+              <option value="PENDING">Chờ cứu nạn</option>
+              <option value="DISPATCHED">Đang tiếp cận</option>
+              <option value="RESOLVED">Đã giải cứu</option>
+            </select>
+            <button class="btn-tactical cyan" onclick="c2Directory.loadDirectory()">🔍 TÌM</button>
+          </div>
+
+          <!-- Bảng danh sách -->
+          <table class="tactical-table">
+            <thead>
+              <tr>
+                <th>NODE ID</th>
+                <th>HỌ TÊN NGƯỜI DÂN</th>
+                <th>SỐ ĐIỆN THOẠI</th>
+                <th>NHÓM MÁU</th>
+                <th>SỰ CỐ KHAI BÁO</th>
+                <th>TRẠNG THÁI</th>
+                <th>LẦN CUỐI</th>
+              </tr>
+            </thead>
+            <tbody id="dir-table-tbody">
+              <tr><td colspan="7" style="text-align:center;padding:16px;color:var(--text-muted)">Đang tải danh bạ hồ sơ...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- CỘT PHẢI: THẺ HỒ SƠ Y TẾ ĐIỆN TỬ DÃ CHIẾN -->
+        <div class="avionics-panel">
+          <div class="panel-header">
+            <span class="panel-title">
+              <svg class="btn-icon" viewBox="0 0 24 24" width="13" height="13" stroke-width="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+              HỒ SƠ Y TẾ KHẨN CẤP
+            </span>
+          </div>
+          <div id="dir-medical-card-content" style="padding:12px">
+            <div style="text-align:center;padding:40px 20px;color:var(--text-muted);border:1px dashed var(--border-subtle);border-radius:4px">
+              <div style="font-size:24px;margin-bottom:8px">🩺</div>
+              <div style="font-size:12px;font-weight:700">CHỌN MỘT NẠN NHÂN ĐỂ XEM HỒ SƠ Y TẾ</div>
+              <div style="font-size:10px;margin-top:4px">Nhấp vào một dòng trong danh sách bên trái để mở thẻ thông tin chi tiết</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════════════════════
          TAB 5: SƠ ĐỒ MẠNG LƯỚI MESH (TOPOLOGY)
          ════════════════════════════════════════════════════════════════════════ -->
     <section id="tab-topology" class="tab-content">
@@ -1563,6 +1671,7 @@
   <script src="js/c2-kanban.js"></script>
   <script src="js/c2-auth.js"></script>
   <script src="js/c2-devices.js"></script>
+  <script src="js/c2-directory.js"></script>
   <script src="js/c2-simulator.js"></script>
   <script src="js/c2-palette.js"></script>
   <script src="js/c2-app.js"></script>

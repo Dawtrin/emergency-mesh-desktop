@@ -79,6 +79,18 @@ public class IncidentApiController {
         return list.stream().map(r -> maskRecord(r, officer)).toList();
     }
 
+    /** Tìm kiếm & Tra cứu hồ sơ nạn nhân nâng cao (theo từ khóa, nhóm máu, trạng thái). */
+    @GetMapping(value = "/search", produces = MediaType.APPLICATION_JSON_VALUE)
+    public List<VictimDao.VictimRecord> searchVictims(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String bloodType,
+            @RequestParam(required = false) String status,
+            HttpServletRequest request) {
+        boolean officer = isOfficer(request);
+        List<VictimDao.VictimRecord> list = c2Service.getVictimDao().search(q, bloodType, status);
+        return list.stream().map(r -> maskRecord(r, officer)).toList();
+    }
+
     /** Thống kê KPI cho Trang Chủ — Avionics Cards. */
     @GetMapping(value = "/stats", produces = MediaType.APPLICATION_JSON_VALUE)
     public Map<String, Object> getStats() {
