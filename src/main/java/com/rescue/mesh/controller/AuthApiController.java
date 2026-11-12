@@ -90,4 +90,29 @@ public class AuthApiController {
         }
         return ResponseEntity.ok(Map.of("status", "LOGGED_OUT"));
     }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@RequestBody Map<String, String> body, HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("user") == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Chưa đăng nhập"));
+        }
+
+        UserEntity currentUser = (UserEntity) session.getAttribute("user");
+        String oldPassword = body.get("oldPassword");
+        String newPassword = body.get("newPassword");
+
+        if (oldPassword == null || newPassword == null || newPassword.length() < 6) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Mật khẩu mới phải từ 6 ký tự trở lên"));
+        }
+
+        UserDao dao = databaseManager.getUserDao();
+        UserEntity freshUser = dao.findByUsername(currentUser.getUsername());
+        if (freshUser == null || !passwordEncoder.matches(oldPassword, freshUser.getPasswordHash())) {
+            return ResponseEntity.status(400).body(Map.of("error", "Mật khẩu cũ không chính xác"));
+        }
+
+        dao.updatePassword(currentUser.getUsername(), passwordEncoder.encode(newPassword));
+        return ResponseEntity.ok(Map.of("status", "PASSWORD_CHANGED"));
+    }
 }

@@ -4,6 +4,8 @@
  */
 const c2Auth = {
   currentUser: null,
+  allUsers: [],
+  selectedRoleFilter: 'ALL',
 
   async init() {
     await this.checkSession();
@@ -15,6 +17,10 @@ const c2Auth = {
       if (res.ok) {
         this.currentUser = await res.json();
         this.renderUserBadge();
+        this.renderShiftInfo();
+        if (c2App.activeTab === 'tab-admin') {
+          this.loadUsersList();
+        }
       } else {
         this.currentUser = null;
         this.renderUserBadge();
@@ -28,15 +34,15 @@ const c2Auth = {
     const badgeContainer = document.getElementById('hud-user-session');
     if (!badgeContainer) return;
 
-    if (this.currentUser && this.currentUser.username) {
+    if (this.currentUser && this.currentUser.authenticated) {
       const roleColor = this.currentUser.role === 'ADMIN' ? 'var(--defcon-red)' : (this.currentUser.role === 'COMMANDER' ? 'var(--orbital-amber)' : 'var(--aero-cyan)');
       badgeContainer.innerHTML = `
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:10px;color:var(--text-muted)">TRỰC BAN:</span>
-          <span style="font-size:11px;font-weight:700;color:#fff">${this.currentUser.fullName || this.currentUser.username}</span>
+          <span style="font-size:11px;font-weight:700;color:#fff">${this.currentUser.displayName || this.currentUser.username}</span>
           <span class="badge" style="font-size:9px;color:${roleColor};border-color:${roleColor}">${this.currentUser.role}</span>
-          <button class="btn-tactical" style="padding:2px 6px;font-size:9px" onclick="c2Auth.openAdminModal()" title="Quản lý nhân sự tác chiến">⚙ QUẢN TRỊ</button>
-          <button class="btn-tactical" style="padding:2px 6px;font-size:9px;color:var(--text-muted)" onclick="c2Auth.logout()">ĐĂNG XUẤT</button>
+          <button class="btn-tactical" style="padding:2px 8px;font-size:9px" onclick="c2App.switchTab('tab-admin')" title="Mở trang Quản trị Cán bộ">⚙ QUẢN TRỊ</button>
+          <button class="btn-tactical" style="padding:2px 8px;font-size:9px;color:var(--text-muted)" onclick="c2Auth.logout()">ĐĂNG XUẤT</button>
         </div>
       `;
     } else {
@@ -44,6 +50,23 @@ const c2Auth = {
         <button class="btn-tactical cyan" style="padding:4px 10px;font-size:10px" onclick="c2Auth.openLoginModal()">
           🔑 ĐĂNG NHẬP CÁN BỘ
         </button>
+      `;
+    }
+  },
+
+  renderShiftInfo() {
+    const infoEl = document.getElementById('admin-current-shift-info');
+    if (!infoEl) return;
+    if (this.currentUser && this.currentUser.authenticated) {
+      infoEl.innerHTML = `
+        <div>Cán bộ trực ban: <strong style="color:var(--aero-cyan)">${this.currentUser.displayName} (${this.currentUser.username})</strong></div>
+        <div>Cấp quyền tác chiến: <strong style="color:var(--orbital-amber)">${this.currentUser.role}</strong></div>
+        <div>Phiên làm việc: <span class="badge success" style="font-size:9px">ĐANG TRỰC CHỈ HUY</span></div>
+      `;
+    } else {
+      infoEl.innerHTML = `
+        <div style="color:var(--text-muted)">Chưa đăng nhập cán bộ trực ban. Phiên hiện tại là: <strong>KHÁCH QUAN SÁT (OBSERVER)</strong> (Dữ liệu cá nhân bị che mờ để bảo mật).</div>
+        <button class="btn-tactical cyan" style="margin-top:8px;padding:4px 12px;font-size:10px" onclick="c2Auth.openLoginModal()">ĐĂNG NHẬP NGAY</button>
       `;
     }
   },
@@ -85,10 +108,10 @@ const c2Auth = {
         return;
       }
 
-      this.currentUser = await res.json();
-      c2App.showToast(`Chào mừng cán bộ: ${this.currentUser.fullName || this.currentUser.username}`, 'success');
-      this.renderUserBadge();
+      await this.checkSession();
+      c2App.showToast(`Chào mừng cán bộ: ${this.currentUser.displayName || this.currentUser.username}`, 'success');
       this.closeLoginModal();
+      if (window.c2Home) c2Home.refreshIncidents();
     } catch (e) {
       if (errEl) errEl.textContent = 'Lỗi kết nối xác thực: ' + e.message;
     }
@@ -98,60 +121,87 @@ const c2Auth = {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch (e) {}
-    this.currentUser = null;
-    this.renderUserBadge();
+    await this.checkSession();
     c2App.showToast('Đã đăng xuất khỏi phiên tác chiến', 'info');
+    if (window.c2Home) c2Home.refreshIncidents();
   },
 
-  async openAdminModal() {
-    const modal = document.getElementById('admin-users-modal');
-    if (modal) {
-      modal.classList.add('show');
-      await this.loadUsersList();
-    }
-  },
-
-  closeAdminModal() {
-    const modal = document.getElementById('admin-users-modal');
-    if (modal) modal.classList.remove('show');
+  setRoleFilter(role) {
+    this.selectedRoleFilter = role;
+    document.querySelectorAll('.role-filter-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.role === role);
+    });
+    this.renderUsersTable();
   },
 
   async loadUsersList() {
-    const tbody = document.getElementById('admin-users-tbody');
-    if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:12px;color:var(--text-muted)">Đang tải danh sách cán bộ...</td></tr>';
-
     try {
       const res = await fetch('/api/admin/users');
-      if (!res.ok) throw new Error('Cần quyền ADMIN/COMMANDER để truy cập');
-      const users = await res.json();
-
-      tbody.innerHTML = users.map(u => {
-        const statusBadge = u.active ? '<span class="badge success" style="font-size:9px">HOẠT ĐỘNG</span>' : '<span class="badge danger" style="font-size:9px">BỊ KHÓA</span>';
-        return `
-          <tr>
-            <td><strong style="color:var(--aero-cyan)">${u.username}</strong></td>
-            <td>${u.fullName || '—'}</td>
-            <td><span class="badge" style="font-size:9px">${u.role}</span></td>
-            <td>${statusBadge}</td>
-            <td>
-              <button class="btn-tactical" style="padding:2px 6px;font-size:9px" onclick="c2Auth.toggleUserStatus('${u.username}', ${!u.active})">
-                ${u.active ? 'Khóa' : 'Mở khóa'}
-              </button>
-            </td>
-          </tr>
-        `;
-      }).join('');
+      if (res.status === 401 || res.status === 403) {
+        this.renderForbidden();
+        return;
+      }
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      this.allUsers = await res.json();
+      this.renderUsersTable();
     } catch (e) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:12px;color:var(--defcon-red)">${e.message}</td></tr>`;
+      console.warn('[c2Auth] loadUsersList error:', e);
+      this.renderForbidden();
     }
   },
 
+  renderForbidden() {
+    const tbody = document.getElementById('tab-admin-users-tbody');
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--orbital-amber)">
+        🔒 Bạn đang xem ở vai trò Quan sát (OBSERVER) hoặc chưa đăng nhập ADMIN.<br>
+        <button class="btn-tactical cyan" style="margin-top:8px" onclick="c2Auth.openLoginModal()">ĐĂNG NHẬP ADMIN ĐỂ QUẢN TRỊ</button>
+      </td></tr>`;
+    }
+  },
+
+  renderUsersTable() {
+    const tbody = document.getElementById('tab-admin-users-tbody');
+    if (!tbody) return;
+
+    let filtered = this.allUsers;
+    if (this.selectedRoleFilter !== 'ALL') {
+      filtered = this.allUsers.filter(u => u.role === this.selectedRoleFilter);
+    }
+
+    if (!filtered || filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--text-muted)">Không có tài khoản nào phù hợp</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(u => {
+      const statusBadge = u.active ? '<span class="badge success" style="font-size:9px">HOẠT ĐỘNG</span>' : '<span class="badge danger" style="font-size:9px">BỊ KHÓA</span>';
+      const roleColor = u.role === 'ADMIN' ? 'var(--defcon-red)' : (u.role === 'COMMANDER' ? 'var(--orbital-amber)' : 'var(--aero-cyan)');
+      const lastLogin = u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleTimeString('vi-VN') + ' ' + new Date(u.lastLoginAt).toLocaleDateString('vi-VN') : 'Chưa đăng nhập';
+
+      return `
+        <tr>
+          <td><strong style="color:var(--aero-cyan)">${u.username}</strong></td>
+          <td><strong>${u.displayName || '—'}</strong></td>
+          <td><span class="badge" style="font-size:9px;color:${roleColor};border-color:${roleColor}">${u.role}</span></td>
+          <td>${statusBadge}</td>
+          <td><span style="font-size:10px;color:var(--text-muted)">${lastLogin}</span></td>
+          <td>
+            <button class="btn-tactical" style="padding:2px 6px;font-size:9px" onclick="c2Auth.promptResetPassword('${u.username}')">Đổi MK</button>
+            <button class="btn-tactical ${u.active ? 'danger' : 'success'}" style="padding:2px 6px;font-size:9px;margin-left:4px" onclick="c2Auth.toggleUserStatus('${u.username}', ${!u.active})">
+              ${u.active ? 'Khóa' : 'Mở khóa'}
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  },
+
   async createUser() {
-    const uInput = document.getElementById('new-user-username');
-    const fInput = document.getElementById('new-user-fullname');
-    const pInput = document.getElementById('new-user-password');
-    const rSelect = document.getElementById('new-user-role');
+    const uInput = document.getElementById('tab-new-user-username');
+    const fInput = document.getElementById('tab-new-user-fullname');
+    const pInput = document.getElementById('tab-new-user-password');
+    const rSelect = document.getElementById('tab-new-user-role');
 
     if (!uInput || !pInput || !uInput.value.trim() || !pInput.value) {
       c2App.showToast('Vui lòng nhập tên đăng nhập và mật khẩu cán bộ', 'warning');
@@ -160,7 +210,7 @@ const c2Auth = {
 
     const payload = {
       username: uInput.value.trim(),
-      fullName: fInput ? fInput.value.trim() : '',
+      displayName: fInput ? fInput.value.trim() : uInput.value.trim(),
       password: pInput.value,
       role: rSelect ? rSelect.value : 'DISPATCHER'
     };
@@ -175,7 +225,7 @@ const c2Auth = {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || 'Lỗi tạo tài khoản');
       }
-      c2App.showToast(`Đã tạo tài khoản cán bộ: ${payload.username}`, 'success');
+      c2App.showToast(`Đã tạo tài khoản cán bộ: ${payload.username} (${payload.role})`, 'success');
       uInput.value = '';
       if (fInput) fInput.value = '';
       pInput.value = '';
@@ -187,14 +237,59 @@ const c2Auth = {
 
   async toggleUserStatus(username, active) {
     try {
-      const res = await fetch(`/api/admin/users/${username}/status`, {
-        method: 'POST',
+      const res = await fetch(`/api/admin/users/${username}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ active })
       });
       if (!res.ok) throw new Error('Không thể đổi trạng thái tài khoản');
       c2App.showToast(`Đã ${active ? 'mở khóa' : 'khóa'} tài khoản ${username}`, 'success');
       await this.loadUsersList();
+    } catch (e) {
+      c2App.showToast(e.message, 'danger');
+    }
+  },
+
+  promptResetPassword(username) {
+    const newPass = prompt(`Nhập mật khẩu mới cho cán bộ ${username}:`);
+    if (!newPass) return;
+    this.executeResetPassword(username, newPass);
+  },
+
+  async executeResetPassword(username, newPassword) {
+    try {
+      const res = await fetch(`/api/admin/users/${username}/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPassword })
+      });
+      if (!res.ok) throw new Error('Không thể đặt lại mật khẩu');
+      c2App.showToast(`Đã đặt lại mật khẩu cho cán bộ ${username}`, 'success');
+    } catch (e) {
+      c2App.showToast(e.message, 'danger');
+    }
+  },
+
+  async changeOwnPassword() {
+    const oldP = document.getElementById('my-old-password')?.value;
+    const newP = document.getElementById('my-new-password')?.value;
+    if (!oldP || !newP) {
+      c2App.showToast('Vui lòng nhập mật khẩu cũ và mật khẩu mới', 'warning');
+      return;
+    }
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ oldPassword: oldP, newPassword: newP })
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error || 'Đổi mật khẩu thất bại');
+      }
+      c2App.showToast('Đổi mật khẩu cá nhân thành công!', 'success');
+      document.getElementById('my-old-password').value = '';
+      document.getElementById('my-new-password').value = '';
     } catch (e) {
       c2App.showToast(e.message, 'danger');
     }

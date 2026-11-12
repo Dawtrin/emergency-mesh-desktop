@@ -1,7 +1,10 @@
 package com.rescue.mesh.controller;
 
 import com.rescue.mesh.db.VictimDao;
+import com.rescue.mesh.model.UserEntity;
 import com.rescue.mesh.service.C2ControllerService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -11,13 +14,7 @@ import java.util.*;
 
 /**
  * REST API cung cấp dữ liệu sự cố cứu nạn cho Web Dashboard.
- *
- * Endpoints (theo FINAL spec §6.1):
- *   GET  /api/victims             — Danh sách tất cả nạn nhân (filter by status)
- *   GET  /api/victims/stats       — Thống kê KPI (total, critical, pending, dispatched, resolved)
- *   GET  /api/victims/priority    — Top 5 ca nguy hiểm nhất
- *   GET  /api/victims/{nodeId}    — Chi tiết 1 ca
- *   POST /api/victims/{nodeId}/resolve — Đánh dấu hoàn tất cứu nạn
+ * Tích hợp RBAC Data Masking: Tự động che mờ SĐT và thông tin y tế đối với vai trò OBSERVER/Khách.
  */
 @RestController
 @RequestMapping("/api/victims")
@@ -32,14 +29,54 @@ public class IncidentApiController {
         this.messagingTemplate = messagingTemplate;
     }
 
-    /** Danh sách tất cả nạn nhân — filter tùy chọn theo status. */
+    private boolean isOfficer(HttpServletRequest request) {
+        if (request == null) return false;
+        HttpSession session = request.getSession(false);
+        if (session != null && session.getAttribute("user") != null) {
+            UserEntity user = (UserEntity) session.getAttribute("user");
+            String role = user.getRole();
+            return "ADMIN".equals(role) || "COMMANDER".equals(role) || "DISPATCHER".equals(role);
+        }
+        return false;
+    }
+
+    private VictimDao.VictimRecord maskRecord(VictimDao.VictimRecord r, boolean officer) {
+        if (r == null || officer) return r;
+        String maskedPhone = r.phone() != null && r.phone().length() > 4
+                ? r.phone().substring(0, 3) + "****" + r.phone().substring(r.phone().length() - 2)
+                : "09******XX";
+        return new VictimDao.VictimRecord(
+                r.nodeId(),
+                r.fullName(),
+                maskedPhone,
+                "***",
+                "[BẢO MẬT — CẦN QUYỀN CHỈ HUY]",
+                r.victimCount(),
+                r.alertType(),
+                r.severity(),
+                r.latitude(),
+                r.longitude(),
+                r.hasFix(),
+                r.accuracyM(),
+                r.fixAgeMs(),
+                r.status(),
+                r.dispatchedTeam(),
+                r.firstSeen(),
+                r.lastUpdated()
+        );
+    }
+
+    /** Danh sách tất cả nạn nhân — filter tùy chọn theo status kèm RBAC masking. */
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public List<VictimDao.VictimRecord> listVictims(
-            @RequestParam(required = false) String status) {
-        if (status != null && !status.isBlank()) {
-            return c2Service.getVictimDao().findByStatus(status.toUpperCase());
-        }
-        return c2Service.getVictimDao().findAll();
+            @RequestParam(required = false) String status,
+            HttpServletRequest request) {
+        boolean officer = isOfficer(request);
+        List<VictimDao.VictimRecord> list = (status != null && !status.isBlank())
+                ? c2Service.getVictimDao().findByStatus(status.toUpperCase())
+                : c2Service.getVictimDao().findAll();
+
+        return list.stream().map(r -> maskRecord(r, officer)).toList();
     }
 
     /** Thống kê KPI cho Trang Chủ — Avionics Cards. */
@@ -67,7 +104,8 @@ public class IncidentApiController {
 
     /** Top 5 ca ưu tiên cao nhất (PENDING + CRITICAL/HIGH trước). */
     @GetMapping(value = "/priority", produces = MediaType.APPLICATION_JSON_VALUE)
-    public List<VictimDao.VictimRecord> getPriority() {
+    public List<VictimDao.VictimRecord> getPriority(HttpServletRequest request) {
+        boolean officer = isOfficer(request);
         List<VictimDao.VictimRecord> pending = new ArrayList<>(c2Service.getVictimDao().findByStatus("PENDING"));
         // Sort: CRITICAL > HIGH > MEDIUM, then by time
         pending.sort((a, b) -> {
@@ -76,13 +114,15 @@ public class IncidentApiController {
             if (sa != sb) return sa - sb;
             return Long.compare(a.firstSeen(), b.firstSeen());
         });
-        return pending.size() > 5 ? pending.subList(0, 5) : pending;
+        List<VictimDao.VictimRecord> sub = pending.size() > 5 ? pending.subList(0, 5) : pending;
+        return sub.stream().map(r -> maskRecord(r, officer)).toList();
     }
 
     /** Chi tiết 1 ca theo nodeId. */
     @GetMapping(value = "/{nodeId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public VictimDao.VictimRecord getById(@PathVariable String nodeId) {
-        return c2Service.getVictimDao().findById(nodeId);
+    public VictimDao.VictimRecord getById(@PathVariable String nodeId, HttpServletRequest request) {
+        boolean officer = isOfficer(request);
+        return maskRecord(c2Service.getVictimDao().findById(nodeId), officer);
     }
 
     /**
