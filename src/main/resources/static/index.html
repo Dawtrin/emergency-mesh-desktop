@@ -37,18 +37,23 @@
        ████████████████████████████████████████████████████████████████████████ -->
   <header class="tactical-header">
     <div class="header-topbar">
+      <!-- 1. Hệ thống danh xưng C2 & Cảnh báo DEFCON -->
       <div class="brand-section">
-        <div class="defcon-led" id="defcon-led" title="DEFCON Status"></div>
+        <div class="defcon-led" id="defcon-led" title="Trạng thái DEFCON"></div>
         <div class="brand-titles">
-          <h1>RINNSAN SCOUT</h1>
-          <div class="subtitle">AEROSPACE TACTICAL COMMAND & CONTROL • DUAL-ENGINE HYBRID</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <h1 style="margin:0;font-size:14px;letter-spacing:1.5px;color:var(--aero-cyan)">EMERGENCY MESH C2</h1>
+            <span class="badge" style="font-size:8px;padding:1px 6px;color:var(--aero-cyan);border-color:var(--aero-cyan)">ĐÀ NẴNG HQ</span>
+          </div>
+          <div class="subtitle" style="font-size:9px;color:var(--text-muted);margin-top:2px">TRUNG TÂM CHỈ HUY TÁC CHIẾN CỨU NẠN LƯỚI KHẨN CẤP DÃ CHIẾN</div>
         </div>
       </div>
 
+      <!-- 2. Đồng hồ tác chiến & Trạng thái mạng Mesh -->
       <div class="hud-readouts">
         <div class="hud-item">
-          <span class="hud-label">TRẠM DÃ CHIẾN HQ</span>
-          <span class="hud-value" style="color:var(--aero-cyan)">TRƯỜNG ĐH VKU [15.9753°N, 108.2532°E]</span>
+          <span class="hud-label">TRẠM HQ</span>
+          <span class="hud-value" style="color:var(--aero-cyan)">VKU [15.975°N, 108.253°E]</span>
         </div>
         <div class="hud-item">
           <span class="hud-label">GIỜ CHỈ HUY (VN)</span>
@@ -59,39 +64,55 @@
           <span class="hud-value" id="hud-time-utc">--:--:-- UTC</span>
         </div>
         <div class="hud-item">
-          <span class="hud-label">MESH TCP / WS</span>
+          <span class="hud-label">MESH TCP 8888</span>
           <span class="hud-value" id="hud-ws-status">
             <span class="status-led status-led--warning" style="margin-right:4px"></span>READY
           </span>
         </div>
       </div>
 
+      <!-- 3. Khu vực thao tác tác chiến & Cán bộ trực ban -->
       <div class="header-controls">
-        <button id="btn-devices-modal" class="btn-tactical cyan" onclick="c2Devices.openModal()" title="Quản lý thiết bị tham gia mạng và quét mã QR ghép đôi">
+        <button id="btn-devices-modal" class="btn-tactical cyan" onclick="c2Devices.openModal()" title="Quét mã QR ghép đôi điện thoại Android qua mạng Mesh">
           <svg class="btn-icon" viewBox="0 0 24 24" width="13" height="13" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
           GHÉP ĐÔI MESH
         </button>
-        <div id="hud-user-session" style="display:inline-flex;align-items:center"></div>
-        <button id="btn-palette-toggle" class="btn-tactical" onclick="c2Palette.toggle()" title="Mở Command Palette tác chiến dã chiến (Ctrl+K)" style="color:var(--aero-cyan,#00F0FF);border-color:rgba(0,240,255,.35)">
+
+        <button id="btn-palette-toggle" class="btn-tactical" onclick="c2Palette.toggle()" title="Mở Command Palette tác chiến (Ctrl+K)">
           <svg class="btn-icon" viewBox="0 0 24 24" width="13" height="13" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           CTRL+K
         </button>
-        <button id="btn-mute-toggle" class="btn-tactical danger">
+
+        <button id="btn-mute-toggle" class="btn-tactical danger" title="Bật/Tắt còi báo động dã chiến">
           <svg class="btn-icon" viewBox="0 0 24 24" width="13" height="13" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
           CÒI BÁO ĐỘNG
         </button>
-        <button id="btn-inject-realistic" class="btn-tactical cyan" title="Kích hoạt 7 tình huống cứu nạn thực tế trên địa bàn Đà Nẵng">
-          <svg class="btn-icon" viewBox="0 0 24 24" width="13" height="13" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="12 6 12 12 16 14"/></svg>
-          7 TÌNH HUỐNG THỰC TẾ
-        </button>
-        <button id="btn-inject-demo" class="btn-tactical amber">
-          <svg class="btn-icon" viewBox="0 0 24 24" width="13" height="13" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-          BƠM DIỄN TẬP
-        </button>
-        <button id="btn-clear-data" class="btn-tactical" style="color:var(--text-muted);border-color:var(--border-subtle)" title="Xóa sạch toàn bộ dữ liệu mẫu">
-          <svg class="btn-icon" viewBox="0 0 24 24" width="13" height="13" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-          LÀM SẠCH DỮ LIỆU
-        </button>
+
+        <!-- Dropdown Diễn tập / Thử nghiệm gọn gàng -->
+        <div class="sim-dropdown-container" style="position:relative">
+          <button id="btn-sim-menu-toggle" class="btn-tactical amber" onclick="c2App.toggleSimMenu()" title="Công cụ diễn tập & tình huống mẫu">
+            <svg class="btn-icon" viewBox="0 0 24 24" width="12" height="12" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            DIỄN TẬP ▾
+          </button>
+          <div id="sim-menu-dropdown" class="sim-dropdown-menu">
+            <button class="sim-menu-item" id="btn-inject-realistic">
+              <svg viewBox="0 0 24 24" width="12" height="12" stroke-width="2" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polygon points="12 6 12 12 16 14"/></svg>
+              7 TÌNH HUỐNG THỰC TẾ ĐÀ NẴNG
+            </button>
+            <button class="sim-menu-item" id="btn-inject-demo">
+              <svg viewBox="0 0 24 24" width="12" height="12" stroke-width="2" fill="none" stroke="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              BƠM 3 CA CẤP CỨU MẪU
+            </button>
+            <div style="height:1px;background:var(--border-subtle);margin:4px 0"></div>
+            <button class="sim-menu-item danger" id="btn-clear-data">
+              <svg viewBox="0 0 24 24" width="12" height="12" stroke-width="2" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+              LÀM SẠCH DỮ LIỆU DIỄN TẬP
+            </button>
+          </div>
+        </div>
+
+        <!-- Khung Cán bộ Trực ban chống vỡ chữ -->
+        <div id="hud-user-session" class="officer-session-wrapper"></div>
       </div>
     </div>
 
@@ -430,19 +451,19 @@
           <p style="font:400 10px var(--font-sans);color:var(--text-muted);margin-bottom:8px;line-height:1.4">
             Bấm vào điểm chớp đỏ → OSRM tự động tìm Bệnh viện/PCCC gần nhất và định tuyến theo đường thực tế Đà Nẵng.
           </p>
-          <div id="map-drawer-victims" style="max-height:300px;overflow-y:auto;margin-bottom:12px">
+          <div id="map-drawer-victims" class="map-drawer-victims-list">
             <!-- Dynamically filled by c2-map.js -->
           </div>
-          <div style="display:flex;gap:6px;flex-direction:column">
-            <button class="btn-tactical danger" id="btn-inject-medical-map">
+          <div class="drawer-footer-actions">
+            <button class="btn-tactical danger" id="btn-inject-medical-map" style="width:100%;font-size:10px;padding:6px">
               <svg class="btn-icon" viewBox="0 0 24 24" width="12" height="12" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
               BƠM CA CẤP CỨU (AB-)
             </button>
-            <button class="btn-tactical" id="btn-inject-flood-map">
+            <button class="btn-tactical" id="btn-inject-flood-map" style="width:100%;font-size:10px;padding:6px">
               <svg class="btn-icon" viewBox="0 0 24 24" width="12" height="12" stroke-width="2"><path d="M2 12h20M2 17h20M2 7h20"/></svg>
               BƠM 3 CA LŨ LỤT
             </button>
-            <button class="btn-tactical success" onclick="c2App.switchTab('tab-interagency')">
+            <button class="btn-tactical success" onclick="c2App.switchTab('tab-interagency')" style="width:100%;font-size:10px;padding:6px">
               <svg class="btn-icon" viewBox="0 0 24 24" width="12" height="12" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
               MỞ CỔNG LIÊN NGÀNH
             </button>

@@ -196,11 +196,14 @@ body::before {
 
 .header-topbar {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 8px 20px;
-  border-bottom: 1px solid rgba(0,240,255,.08);
+  padding: 10px 24px;
+  border-bottom: 1px solid rgba(0,240,255,.12);
+  background: rgba(8, 12, 22, 0.95);
+  backdrop-filter: blur(16px);
+  gap: 16px;
 }
 
-.brand-section { display: flex; align-items: center; gap: 14px; }
+.brand-section { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
 
 .defcon-led {
   width: 14px; height: 14px; border-radius: 50%;
@@ -218,12 +221,12 @@ body::before {
 }
 .brand-titles .subtitle {
   font-family: var(--font-sans);
-  font-size: 10px; font-weight: 500;
+  font-size: 9px; font-weight: 500;
   color: var(--text-muted);
   letter-spacing: .06em; text-transform: uppercase;
 }
 
-.hud-readouts { display: flex; align-items: center; gap: 24px; }
+.hud-readouts { display: flex; align-items: center; gap: 20px; flex-shrink: 0; }
 .hud-item { display: flex; flex-direction: column; gap: 2px; }
 .hud-label {
   font-family: var(--font-sans);
@@ -236,8 +239,86 @@ body::before {
   font-size: 12px; font-weight: 700;
   color: var(--aero-cyan);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .hud-value.live { color: var(--life-green); }
+
+/* Cán bộ trực ban & Phân quyền chống vỡ chữ */
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.officer-session-wrapper {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap !important;
+  flex-shrink: 0;
+}
+.officer-session-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(14, 19, 31, 0.85);
+  border: 1px solid var(--border-glass);
+  border-radius: 4px;
+  padding: 4px 10px;
+  white-space: nowrap !important;
+}
+.officer-session-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap !important;
+}
+
+/* Menu Diễn tập / Thử nghiệm gọn gàng */
+.sim-dropdown-container {
+  position: relative;
+}
+.sim-dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  background: #0B101B;
+  border: 1px solid var(--border-glass);
+  box-shadow: 0 12px 36px rgba(0,0,0,0.95), 0 0 16px rgba(0,240,255,0.25);
+  border-radius: 4px;
+  min-width: 250px;
+  z-index: var(--z-dropdown);
+  padding: 6px;
+  flex-direction: column;
+  gap: 2px;
+}
+.sim-dropdown-menu.show {
+  display: flex;
+}
+.sim-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font: 600 11px var(--font-mono);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+.sim-menu-item:hover {
+  background: rgba(0, 240, 255, 0.12);
+  color: #fff;
+}
+.sim-menu-item.danger:hover {
+  background: rgba(255, 30, 64, 0.2);
+  color: var(--defcon-red);
+}
 .hud-value.error { color: var(--defcon-red); }
 
 .header-controls { display: flex; align-items: center; gap: 8px; }
@@ -974,23 +1055,40 @@ table.tactical-table tr:nth-child(even) { background: rgba(255,255,255,.015); }
 .map-floating-drawer {
   position: absolute;
   top: 12px; left: 12px;
-  width: 320px;
+  width: 330px;
   max-height: calc(100% - 24px);
-  background: rgba(5,7,11,.94);
+  background: rgba(8, 12, 22, 0.96);
   backdrop-filter: blur(20px);
   border: 1px solid var(--border-glass);
-  box-shadow: 0 10px 40px rgba(0,0,0,.8);
-  z-index: 1000;
-  overflow-y: auto;
+  box-shadow: 0 16px 48px rgba(0,0,0,.9), 0 0 20px rgba(0,240,255,0.12);
+  z-index: var(--z-drawer-map);
   padding: 14px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
   transition: all var(--duration-fast) var(--ease-standard);
 }
 .map-floating-drawer.collapsed {
   width: 170px;
-  max-height: 42px;
+  max-height: 44px;
   overflow: hidden;
   padding: 8px 12px;
+}
+.map-drawer-victims-list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  max-height: 42vh;
+  margin-bottom: 8px;
+  padding-right: 4px;
+}
+.drawer-footer-actions {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
 }
 .map-floating-drawer.collapsed > *:not(.drawer-header-row) {
   display: none !important;
@@ -1061,9 +1159,9 @@ table.tactical-table tr:nth-child(even) { background: rgba(255,255,255,.015); }
 
 /* ──────────────────────────── §6.9 TOAST NOTIFICATION ────────────────────── */
 .toast-container {
-  position: fixed; top: 16px; right: 16px;
+  position: fixed; bottom: 24px; right: 24px;
   z-index: var(--z-toast);
-  display: flex; flex-direction: column; gap: 8px;
+  display: flex; flex-direction: column-reverse; gap: 8px;
   pointer-events: none;
 }
 .toast {
@@ -1316,23 +1414,28 @@ table.tactical-table tr:nth-child(even) { background: rgba(255,255,255,.015); }
 .modal-overlay {
   position: fixed; inset: 0;
   background: rgba(5,7,11,.88);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
   z-index: var(--z-modal);
   display: none;
-  align-items: center; justify-content: center;
-  padding: 16px;
+  overflow-y: auto;
+  padding: 40px 16px;
 }
-.modal-overlay.show { display: flex; }
+.modal-overlay.show {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
 .modal-box {
   position: relative;
   background: var(--bg-elevated);
   border: 1px solid var(--border-glass);
-  box-shadow: 0 20px 60px rgba(0,0,0,.9), 0 0 30px rgba(0,240,255,0.15);
+  box-shadow: 0 24px 70px rgba(0,0,0,.95), 0 0 30px rgba(0,240,255,0.18);
   padding: 22px 24px;
   min-width: 320px;
   max-width: 95vw;
-  max-height: 90vh;
+  max-height: calc(100vh - 80px);
   overflow-y: auto;
+  margin: auto;
   border-radius: 4px;
   clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
   animation: modalIn var(--duration-base) var(--ease-decelerate);
@@ -1726,7 +1829,7 @@ table.tactical-table tr:nth-child(even) { background: rgba(255,255,255,.015); }
   display: none;
   align-items: flex-start;
   justify-content: center;
-  padding-top: 14vh;
+  padding-top: 80px;
 }
 
 .command-palette-modal.active {

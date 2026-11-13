@@ -94,6 +94,21 @@
                 </configuration>
             </plugin>
 
+            <!-- Surefire Plugin: Tách biệt Unit Test độc lập và Integration Test mạng -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.1.2</version>
+                <configuration>
+                    <includes>
+                        <include>**/*Test.java</include>
+                    </includes>
+                    <excludes>
+                        <exclude>**/*IntegrationTest.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+
             <!-- Spring Boot Executable Fat JAR for Tactical Web C2 -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>

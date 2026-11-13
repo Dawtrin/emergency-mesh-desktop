@@ -37,17 +37,17 @@ const c2Auth = {
     if (this.currentUser && this.currentUser.authenticated) {
       const roleColor = this.currentUser.role === 'ADMIN' ? 'var(--defcon-red)' : (this.currentUser.role === 'COMMANDER' ? 'var(--orbital-amber)' : 'var(--aero-cyan)');
       badgeContainer.innerHTML = `
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:10px;color:var(--text-muted)">TRỰC BAN:</span>
-          <span style="font-size:11px;font-weight:700;color:#fff">${this.currentUser.displayName || this.currentUser.username}</span>
-          <span class="badge" style="font-size:9px;color:${roleColor};border-color:${roleColor}">${this.currentUser.role}</span>
-          <button class="btn-tactical" style="padding:2px 8px;font-size:9px" onclick="c2App.switchTab('tab-admin')" title="Mở trang Quản trị Cán bộ">⚙ QUẢN TRỊ</button>
-          <button class="btn-tactical" style="padding:2px 8px;font-size:9px;color:var(--text-muted)" onclick="c2Auth.logout()">ĐĂNG XUẤT</button>
+        <div class="officer-session-card">
+          <span style="font-size:10px;color:var(--text-muted);white-space:nowrap">TRỰC BAN:</span>
+          <span class="officer-session-name" title="${this.currentUser.displayName || this.currentUser.username}">${this.currentUser.displayName || this.currentUser.username}</span>
+          <span class="badge" style="font-size:9px;color:${roleColor};border-color:${roleColor};white-space:nowrap">${this.currentUser.role}</span>
+          <button class="btn-tactical" style="padding:2px 7px;font-size:9px;white-space:nowrap" onclick="c2App.switchTab('tab-admin')" title="Mở trang Quản trị Cán bộ">⚙ QUẢN TRỊ</button>
+          <button class="btn-tactical" style="padding:2px 7px;font-size:9px;color:var(--text-muted);white-space:nowrap" onclick="c2Auth.logout()" title="Đăng xuất">ĐĂNG XUẤT</button>
         </div>
       `;
     } else {
       badgeContainer.innerHTML = `
-        <button class="btn-tactical cyan" style="padding:4px 10px;font-size:10px" onclick="c2Auth.openLoginModal()">
+        <button class="btn-tactical cyan" style="padding:4px 10px;font-size:10px;white-space:nowrap" onclick="c2Auth.openLoginModal()">
           🔑 ĐĂNG NHẬP CÁN BỘ
         </button>
       `;
