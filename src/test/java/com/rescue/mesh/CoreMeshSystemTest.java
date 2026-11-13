@@ -2,8 +2,6 @@ package com.rescue.mesh;
 
 import com.google.gson.Gson;
 import com.rescue.mesh.model.MeshPacket;
-import com.rescue.mesh.routing.LoadBalancer;
-import com.rescue.mesh.routing.NodeStatus;
 import com.rescue.mesh.routing.RoutingEngine;
 import com.rescue.mesh.routing.SeenPacketCache;
 import com.rescue.mesh.util.ChecksumUtil;
@@ -11,9 +9,6 @@ import com.rescue.mesh.util.PacketFactory;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.time.Instant;
-import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -131,18 +126,6 @@ public class CoreMeshSystemTest {
     // 4. ROUTING ENGINE LOGIC TESTS
     // =========================================================
 
-    /** Helper: tạo RoutingCallback no-op (có đủ 6 methods) */
-    private RoutingEngine.RoutingCallback createNoopCallback() {
-        return new RoutingEngine.RoutingCallback() {
-            @Override public void onPacketArrived(MeshPacket packet) {}
-            @Override public void onPacketRelayed(MeshPacket packet, int nextHop) {}
-            @Override public void onPacketDropped(String packetId, String reason) {}
-            @Override public void onForwardError(int nextHop, String errorMessage) {}
-            @Override public void onDispatchReceived(MeshPacket packet) {}
-            @Override public void onLoadReportReceived(MeshPacket packet) {}
-        };
-    }
-
     @Test
     @DisplayName("RoutingEngine: Base Station nhận gói tin đích đến (onPacketArrived)")
     void testRoutingEngineArrivedAtDestination() {
@@ -159,7 +142,6 @@ public class CoreMeshSystemTest {
             @Override public void onPacketDropped(String packetId, String reason) {}
             @Override public void onForwardError(int nextHop, String errorMessage) {}
             @Override public void onDispatchReceived(MeshPacket packet) {}
-            @Override public void onLoadReportReceived(MeshPacket packet) {}
         };
 
         RoutingEngine baseEngine = new RoutingEngine(
@@ -199,7 +181,6 @@ public class CoreMeshSystemTest {
             }
             @Override public void onForwardError(int nextHop, String errorMessage) {}
             @Override public void onDispatchReceived(MeshPacket packet) {}
-            @Override public void onLoadReportReceived(MeshPacket packet) {}
         };
 
         RoutingEngine engine = new RoutingEngine(
@@ -241,7 +222,6 @@ public class CoreMeshSystemTest {
             }
             @Override public void onForwardError(int nextHop, String errorMessage) {}
             @Override public void onDispatchReceived(MeshPacket packet) {}
-            @Override public void onLoadReportReceived(MeshPacket packet) {}
         };
 
         RoutingEngine engine = new RoutingEngine(

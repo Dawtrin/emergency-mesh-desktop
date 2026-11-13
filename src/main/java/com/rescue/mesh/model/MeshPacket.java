@@ -126,6 +126,15 @@ public class MeshPacket {
         /** ID gói tin gốc được phản hồi ACK */
         private String ackedPacketId;
 
+        /** Tải hiện tại của node (dùng cho LOAD_REPORT) */
+        private Integer currentLoad;
+
+        /** Tổng số gói tin đã xử lý (dùng cho LOAD_REPORT) */
+        private Integer processedTotal;
+
+        /** Cổng TCP lắng nghe (dùng cho LOAD_REPORT) */
+        private Integer listenPort;
+
         // --- Getters & Setters ---
 
         public String getSenderName() { return senderName; }
@@ -160,6 +169,15 @@ public class MeshPacket {
 
         public String getAckedPacketId() { return ackedPacketId; }
         public void setAckedPacketId(String ackedPacketId) { this.ackedPacketId = ackedPacketId; }
+
+        public Integer getCurrentLoad() { return currentLoad; }
+        public void setCurrentLoad(Integer currentLoad) { this.currentLoad = currentLoad; }
+
+        public Integer getProcessedTotal() { return processedTotal; }
+        public void setProcessedTotal(Integer processedTotal) { this.processedTotal = processedTotal; }
+
+        public Integer getListenPort() { return listenPort; }
+        public void setListenPort(Integer listenPort) { this.listenPort = listenPort; }
 
         @Override
         public String toString() {
