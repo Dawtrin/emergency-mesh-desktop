@@ -32,6 +32,7 @@ public class MeshPacket {
     public static final String TYPE_DISPATCH_CMD = "DISPATCH_CMD";
     public static final String TYPE_ACK          = "ACK";
     public static final String TYPE_HEARTBEAT    = "HEARTBEAT";
+    public static final String TYPE_LOAD_REPORT  = "LOAD_REPORT";
 
     // ===== HẰNG SỐ MỨC ĐỘ NGUY HIỂM =====
     public static final String SEVERITY_CRITICAL = "CRITICAL";
@@ -82,6 +83,9 @@ public class MeshPacket {
 
     /** Lịch sử các node đã relay: ["NODE_A", "NODE_B", ...] */
     private List<String> routeHistory;
+
+    /** Lộ trình nguồn chỉ định (Strict Source Routing): ["BASE_STATION", "NODE_B1_RELAY", "NODE_A_VICTIM"] */
+    private List<String> designatedRoute;
 
     /** SHA-256 của payload JSON — kiểm tra tính toàn vẹn dữ liệu */
     private String checksum;
@@ -245,6 +249,7 @@ public class MeshPacket {
         this.hopCount          = 0;
         this.timestamp         = System.currentTimeMillis();
         this.routeHistory      = new ArrayList<>();
+        this.designatedRoute   = new ArrayList<>();
     }
 
     // ===== CHECKSUM METHODS =====
@@ -340,6 +345,26 @@ public class MeshPacket {
 
     public List<String> getRouteHistory() { return routeHistory; }
     public void setRouteHistory(List<String> routeHistory) { this.routeHistory = routeHistory; }
+
+    public List<String> getDesignatedRoute() { return designatedRoute; }
+    public void setDesignatedRoute(List<String> designatedRoute) { this.designatedRoute = designatedRoute; }
+
+    /**
+     * Tìm node kế tiếp trong lộ trình nguồn chỉ định (Strict Source Routing).
+     * @param currentNodeId ID node hiện tại
+     * @return ID của node kế tiếp, hoặc null nếu không tìm thấy hoặc đã là node cuối
+     */
+    public String getNextHopFromDesignatedRoute(String currentNodeId) {
+        if (designatedRoute == null || designatedRoute.isEmpty() || currentNodeId == null) {
+            return null;
+        }
+        for (int i = 0; i < designatedRoute.size() - 1; i++) {
+            if (currentNodeId.equalsIgnoreCase(designatedRoute.get(i))) {
+                return designatedRoute.get(i + 1);
+            }
+        }
+        return null;
+    }
 
     public String getChecksum() { return checksum; }
     public void setChecksum(String checksum) { this.checksum = checksum; }
