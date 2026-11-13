@@ -61,14 +61,23 @@
 
 /* ──────────────────────────── §2 ELEVATION + §3 PALETTE ──────────────────── */
 :root {
-  /* Elevation System (§2) */
+  /* Elevation System (§2 - Fixed Hierarchy) */
   --z-base: 0;
   --z-panel: 10;
   --z-panel-hover: 15;
-  --z-dropdown: 30;
-  --z-toast: 40;
-  --z-modal: 50;
-  --z-command-palette: 60;
+  --z-dropdown: 100;
+  --z-map-controls: 500;
+  --z-dock: 600;
+  --z-drawer-map: 700;
+  --z-navbar: 900;
+  --z-header: 1000;
+  --z-mobile-nav: 1050;
+  --z-dossier-backdrop: 2000;
+  --z-dossier: 2001;
+  --z-modal: 3000;
+  --z-command-palette: 4000;
+  --z-toast: 5000;
+  --z-siren: 99999;
 
   --bg-deep-space:   #05070B;
   --bg-carbon-slate: #0E131F;
@@ -1306,18 +1315,25 @@ table.tactical-table tr:nth-child(even) { background: rgba(255,255,255,.015); }
 /* ──────────────────────────── MODAL OVERLAY ──────────────────────────────── */
 .modal-overlay {
   position: fixed; inset: 0;
-  background: rgba(5,7,11,.8);
+  background: rgba(5,7,11,.88);
+  backdrop-filter: blur(8px);
   z-index: var(--z-modal);
   display: none;
   align-items: center; justify-content: center;
+  padding: 16px;
 }
 .modal-overlay.show { display: flex; }
 .modal-box {
+  position: relative;
   background: var(--bg-elevated);
   border: 1px solid var(--border-glass);
-  box-shadow: 0 16px 64px rgba(0,0,0,.8);
-  padding: 24px;
-  min-width: 400px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.9), 0 0 30px rgba(0,240,255,0.15);
+  padding: 22px 24px;
+  min-width: 320px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 4px;
   clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
   animation: modalIn var(--duration-base) var(--ease-decelerate);
 }
@@ -1325,8 +1341,42 @@ table.tactical-table tr:nth-child(even) { background: rgba(255,255,255,.015); }
   from { opacity: 0; transform: scale(.95) translateY(10px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
+.modal-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-glass);
+}
+.modal-header-bar .modal-title {
+  margin-bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.modal-close-icon {
+  background: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.modal-close-icon:hover {
+  color: #fff;
+  border-color: var(--defcon-red);
+  background: rgba(255,30,64,0.2);
+}
 .modal-title {
-  font: 700 14px var(--font-sans);
+  font: 700 13px var(--font-sans);
   color: var(--aero-cyan);
   letter-spacing: .04em; text-transform: uppercase;
   margin-bottom: 16px;
@@ -1898,7 +1948,7 @@ table.tactical-table tr:nth-child(even) { background: rgba(255,255,255,.015); }
   top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(4px);
-  z-index: 1200;
+  z-index: var(--z-dossier-backdrop);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease;
@@ -1916,7 +1966,7 @@ table.tactical-table tr:nth-child(even) { background: rgba(255,255,255,.015); }
   background: #080C16;
   border-left: 1px solid var(--aero-cyan);
   box-shadow: -10px 0 30px rgba(0, 0, 0, 0.85);
-  z-index: 1201;
+  z-index: var(--z-dossier);
   display: flex;
   flex-direction: column;
   transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);

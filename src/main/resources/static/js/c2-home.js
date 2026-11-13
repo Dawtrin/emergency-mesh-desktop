@@ -244,6 +244,16 @@ const c2Home = {
     cancelBtn.addEventListener('click', cancel);
   },
 
+  closeDispatchModal() {
+    const cancelBtn = document.getElementById('dispatch-cancel-btn');
+    if (cancelBtn) {
+      cancelBtn.click();
+    } else {
+      const modal = document.getElementById('dispatch-modal');
+      if (modal) modal.classList.remove('show');
+    }
+  },
+
   /** Direct status update API without blocking browser confirm */
   async updateStatus(nodeId, status) {
     try {

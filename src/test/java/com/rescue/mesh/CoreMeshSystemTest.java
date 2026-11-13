@@ -333,4 +333,30 @@ public class CoreMeshSystemTest {
         assertEquals(originalPacketId, ack.getPayload().getAckedPacketId());
         assertTrue(ack.verifyChecksum(gson), "ACK packet phải có Checksum hợp lệ");
     }
+
+    @Test
+    @DisplayName("Test Vector v0 Full: Khớp 100% SHA-256 mới (đầy đủ GPS Fix fields + Medical Notes)")
+    void testFullContractTestVectorV0() {
+        MeshPacket.Payload payload = new MeshPacket.Payload();
+        payload.setSenderName("Nguyễn Văn A");
+        payload.setAlertType(MeshPacket.ALERT_FLOOD);
+        payload.setMessage("Nước dâng cao, mắc kẹt tầng 2");
+        payload.setVictimCount(3);
+        payload.setSeverity(MeshPacket.SEVERITY_CRITICAL);
+
+        MeshPacket.Location loc = new MeshPacket.Location(16.067, 108.152, true, 12, 800L);
+        payload.setLocation(loc);
+
+        payload.setPhoneNumber("0901234567");
+        payload.setBloodType("O+");
+        payload.setMedicalNotes("Dị ứng penicillin");
+
+        String payloadJson = gson.toJson(payload);
+        String expectedJson = "{\"senderName\":\"Nguyễn Văn A\",\"alertType\":\"FLOOD_TRAPPED\",\"message\":\"Nước dâng cao, mắc kẹt tầng 2\",\"victimCount\":3,\"severity\":\"CRITICAL\",\"location\":{\"latitude\":16.067,\"longitude\":108.152,\"hasFix\":true,\"accuracyM\":12,\"fixAgeMs\":800},\"phoneNumber\":\"0901234567\",\"bloodType\":\"O+\",\"medicalNotes\":\"Dị ứng penicillin\"}";
+        assertEquals(expectedJson, payloadJson, "Gson serialization phải khớp chính xác định dạng chuỗi JSON");
+
+        String hash = ChecksumUtil.compute(payloadJson);
+        String expectedHash = "4919833103c3cfb518bbc8922ecfcb49cb40b529b56f188a7a5eba5ef8571f97";
+        assertEquals(expectedHash, hash, "SHA-256 hash của vector mới phải khớp chính xác tuyệt đối");
+    }
 }

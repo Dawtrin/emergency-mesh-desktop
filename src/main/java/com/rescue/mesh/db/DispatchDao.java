@@ -109,6 +109,22 @@ public class DispatchDao {
     }
 
     /**
+     * Lấy các lệnh điều phối chưa nhận được ACK để nạp lại vào hàng đợi khi khởi động máy chủ (RAM recovery).
+     */
+    public List<DispatchRecord> findPendingDispatches() {
+        String sql = "SELECT * FROM dispatch_logs WHERE ack_received = 0 ORDER BY dispatched_at ASC";
+        List<DispatchRecord> results = new ArrayList<>();
+        try (Connection conn = dbManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) results.add(mapRow(rs));
+        } catch (SQLException e) {
+            System.err.println("[DB] DispatchDao.findPendingDispatches error: " + e.getMessage());
+        }
+        return results;
+    }
+
+    /**
      * Lấy N lệnh gần nhất dưới dạng Map (phục vụ ReportExportService audit trail).
      */
     public java.util.List<java.util.Map<String, Object>> findRecentAsMap(int limit) {

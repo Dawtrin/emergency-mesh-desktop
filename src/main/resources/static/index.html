@@ -170,25 +170,6 @@
     </div>
   </div>
 
-  <!-- Dispatch Modal -->
-  <div class="modal-overlay" id="dispatch-modal">
-    <div class="modal-box">
-      <div class="modal-title">⚡ PHÁT LỆNH ĐIỀU PHỐI TÁC CHIẾN</div>
-      <div class="config-field">
-        <label class="config-label">MÃ NODE NẠN NHÂN</label>
-        <input type="text" class="config-input" id="dispatch-node-id" readonly>
-      </div>
-      <div class="config-field">
-        <label class="config-label">LỆNH ĐIỀU PHỐI</label>
-        <input type="text" class="config-input" id="dispatch-command" value="Ca-nô số 01 và bác sĩ xuất kích khẩn cấp" placeholder="Nhập lệnh điều phối...">
-      </div>
-      <div style="display:flex;gap:8px;margin-top:16px">
-        <button class="btn-tactical danger lg" id="dispatch-confirm-btn">⚡ XÁC NHẬN ĐIỀU PHỐI</button>
-        <button class="btn-tactical lg" id="dispatch-cancel-btn">✕ HỦY</button>
-      </div>
-    </div>
-  </div>
-
   <!-- ████████████████████████████████████████████████████████████████████████
        MAIN VIEWPORT
        ████████████████████████████████████████████████████████████████████████ -->
@@ -1338,9 +1319,12 @@
     <!-- 1. Dispatch Modal (Trang Chủ) -->
     <div class="modal-overlay" id="dispatch-modal">
       <div class="modal-box" style="max-width:440px">
-        <div class="modal-title">
-          <svg class="btn-icon" viewBox="0 0 24 24" width="14" height="14" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-          PHÁT LỆNH ĐIỀU PHỐI CỨU NẠN DÃ CHIẾN
+        <div class="modal-header-bar">
+          <div class="modal-title">
+            <svg class="btn-icon" viewBox="0 0 24 24" width="14" height="14" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            PHÁT LỆNH ĐIỀU PHỐI CỨU NẠN DÃ CHIẾN
+          </div>
+          <button class="modal-close-icon" onclick="c2Home.closeDispatchModal()" title="Đóng cửa sổ">✕</button>
         </div>
         <div class="config-field">
           <label class="config-label">MÃ NẠN NHÂN (NODE ID)</label>
@@ -1360,9 +1344,12 @@
     <!-- 2. Interagency Create Mission Ticket Modal -->
     <div class="modal-overlay" id="interagency-ticket-modal">
       <div class="modal-box" style="max-width:560px">
-        <div class="modal-title">
-          <svg class="btn-icon" viewBox="0 0 24 24" width="14" height="14" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-          LẬP PHIẾU ĐIỀU PHỐI TÁC CHIẾN LIÊN NGÀNH
+        <div class="modal-header-bar">
+          <div class="modal-title">
+            <svg class="btn-icon" viewBox="0 0 24 24" width="14" height="14" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            LẬP PHIẾU ĐIỀU PHỐI TÁC CHIẾN LIÊN NGÀNH
+          </div>
+          <button class="modal-close-icon" onclick="c2InterAgency.closeCreateTicketModal()" title="Đóng cửa sổ">✕</button>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <div class="config-field" style="grid-column:span 2">
@@ -1415,9 +1402,12 @@
     <!-- 3. Interagency Advance Ticket Modal (Xuất kích / ETA) -->
     <div class="modal-overlay" id="ticket-advance-modal">
       <div class="modal-box" style="max-width:440px">
-        <div class="modal-title">
-          <svg class="btn-icon" viewBox="0 0 24 24" width="14" height="14" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-          XÁC NHẬN LỰC LƯỢNG XUẤT KÍCH
+        <div class="modal-header-bar">
+          <div class="modal-title">
+            <svg class="btn-icon" viewBox="0 0 24 24" width="14" height="14" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            XÁC NHẬN LỰC LƯỢNG XUẤT KÍCH
+          </div>
+          <button class="modal-close-icon" onclick="c2InterAgency.closeAdvanceModal()" title="Đóng cửa sổ">✕</button>
         </div>
         <input type="hidden" id="advance-ticket-id">
         <input type="hidden" id="advance-next-status">
@@ -1485,7 +1475,7 @@
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <span id="dossier-status-badge" class="badge pending">CHỜ CỨU</span>
-          <button onclick="c2Dossier.closeDossier()" style="background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;padding:2px 8px">✕</button>
+          <button class="modal-close-icon" onclick="c2Dossier.closeDossier()" title="Đóng hồ sơ">✕</button>
         </div>
       </div>
 
@@ -1539,7 +1529,10 @@
          ████████████████████████████████████████████████████████████████████████ -->
     <div class="modal-overlay" id="login-modal">
       <div class="modal-box" style="max-width:380px">
-        <div class="modal-title">🔑 ĐĂNG NHẬP CÁN BỘ TÁC CHIẾN</div>
+        <div class="modal-header-bar">
+          <div class="modal-title">🔑 ĐĂNG NHẬP CÁN BỘ TÁC CHIẾN</div>
+          <button class="modal-close-icon" onclick="c2Auth.closeLoginModal()" title="Đóng cửa sổ">✕</button>
+        </div>
         <div id="login-error-msg" style="color:var(--defcon-red);font-size:10px;margin-bottom:8px"></div>
         <div class="config-field">
           <label class="config-label">TÊN ĐĂNG NHẬP</label>
@@ -1561,7 +1554,10 @@
          ████████████████████████████████████████████████████████████████████████ -->
     <div class="modal-overlay" id="admin-users-modal">
       <div class="modal-box" style="max-width:640px">
-        <div class="modal-title">⚙ QUẢN LÝ CÁN BỘ TRỰC BAN & PHÂN QUYỀN</div>
+        <div class="modal-header-bar">
+          <div class="modal-title">⚙ QUẢN LÝ CÁN BỘ TRỰC BAN & PHÂN QUYỀN</div>
+          <button class="modal-close-icon" onclick="c2Auth.closeAdminModal()" title="Đóng cửa sổ">✕</button>
+        </div>
         
         <!-- Danh sách cán bộ -->
         <table class="tactical-table" style="margin-top:12px;margin-bottom:16px">
@@ -1607,7 +1603,10 @@
          ████████████████████████████████████████████████████████████████████████ -->
     <div class="modal-overlay" id="devices-modal">
       <div class="modal-box" style="max-width:680px">
-        <div class="modal-title">📱 THIẾT BỊ MẠNG MESH & GHÉP ĐÔI ZERO-CONFIG</div>
+        <div class="modal-header-bar">
+          <div class="modal-title">📱 THIẾT BỊ MẠNG MESH & GHÉP ĐÔI ZERO-CONFIG</div>
+          <button class="modal-close-icon" onclick="c2Devices.closeModal()" title="Đóng cửa sổ">✕</button>
+        </div>
 
         <div style="display:grid;grid-template-columns:200px 1fr;gap:20px;align-items:center;margin-top:14px;background:rgba(255,255,255,0.03);padding:14px;border-radius:4px">
           <div style="text-align:center">
